@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import PlayerList from '../components/game/PlayerList';
 import { useGame } from '../contexts/GameContext';
 import { useToast } from '../hooks/useToast';
+import { socket } from '../socket';
 
 const Lobby = () => {
   const navigate = useNavigate();
@@ -22,26 +23,39 @@ const Lobby = () => {
   } = useGame();
   const { toast } = useToast();
   const [isReady, setIsReady] = useState(false);
+  const alreadyJoined = useRef(false);
   const botsAdded = useRef(false);
-  const hasAddedSelf = useRef(false);
 
   useEffect(() => {
     resetPlayers();
   }, []);
 
   useEffect(() => {
-    if (!hasAddedSelf.current && playerInfo.name && playerInfo.id) {
-      addPlayer({
-        id: playerInfo.id,
-        name: playerInfo.name,
-        avatar: playerInfo.avatar,
-        isHost: playerInfo.isHost,
-        score: 0,
-        isReady: true,
+    if (!alreadyJoined.current && playerInfo.name && playerInfo.id) {
+      socket.emit('join-lobby', {
+        gameCode,
+        player: {
+          id: playerInfo.id,
+          name: playerInfo.name,
+          avatar: playerInfo.avatar,
+          isHost: playerInfo.isHost,
+          score: 0,
+          isReady: true,
+        },
       });
-      hasAddedSelf.current = true;
+      alreadyJoined.current = true;
     }
-  }, [playerInfo, addPlayer]);
+  }, [playerInfo]);
+
+  useEffect(() => {
+    socket.on('lobby-players', (updatedPlayers) => {
+      setPlayers(updatedPlayers);
+    });
+
+    return () => {
+      socket.off('lobby-players');
+    };
+  }, []);
 
   useEffect(() => {
     const readyInterval = setInterval(() => {
@@ -69,36 +83,22 @@ const Lobby = () => {
 
   const toggleReady = () => {
     setIsReady(prev => !prev);
-    setPlayers(prev =>
-      prev.map(player =>
-        player.id === playerInfo.id ? { ...player, isReady: !isReady } : player
-      )
-    );
+    socket.emit('player-ready', {
+      gameCode,
+      playerId: playerInfo.id,
+      isReady: !isReady,
+    });
   };
 
   const startGame = () => {
+    socket.emit('start-game', { gameCode });
     initializeGame(gameCode);
     navigate(`/game/${gameCode}`);
   };
 
   const toggleBots = () => {
-    if (!botsAdded.current) {
-      const demoPlayers = [
-        { id: 'sarah', name: 'Sarah', avatar: '2', isHost: false, score: 0, isReady: false },
-        { id: 'jordan', name: 'Jordan', avatar: '4', isHost: false, score: 0, isReady: false },
-        { id: 'morgan', name: 'Morgan', avatar: '3', isHost: false, score: 0, isReady: false },
-      ];
-
-      setPlayers(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const newPlayers = demoPlayers.filter(p => !existingIds.has(p.id));
-        return [...prev, ...newPlayers];
-      });
-      botsAdded.current = true;
-    } else {
-      setPlayers(prev => prev.filter(p => !['sarah', 'jordan', 'morgan'].includes(p.id)));
-      botsAdded.current = false;
-    }
+    socket.emit('toggle-bots', { gameCode });
+    botsAdded.current = !botsAdded.current;
   };
 
   const allPlayersReady = players.length >= 3 && players.every(p => p.isReady);

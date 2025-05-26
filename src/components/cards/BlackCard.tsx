@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 
 interface BlackCardProps {
@@ -18,7 +17,7 @@ const BlackCard = ({ text }: BlackCardProps) => {
         <p className="text-xl font-medium text-center">{text}</p>
       </div>
       <div className="absolute bottom-3 right-3 text-sm font-light text-gray-600">
-        Cards Against Online
+        Super Flawed
       </div>
     </motion.div>
   );

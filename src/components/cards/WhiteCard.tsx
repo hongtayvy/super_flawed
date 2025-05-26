@@ -32,7 +32,7 @@ const WhiteCard = ({
         <p className="text-lg font-medium text-center">{text}</p>
       </div>
       <div className="absolute bottom-3 right-3 text-sm font-light text-gray-300">
-        Cards Against Online
+        Super Flawed
       </div>
     </motion.div>
   );

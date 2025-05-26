@@ -13,13 +13,11 @@ const Lobby = () => {
   const gameCode = searchParams.get('code') || '';
   const {
     playerInfo,
-    setPlayerInfo,
-    addPlayer,
-    players,
     setPlayers,
     initializeGame,
     resetPlayers,
     resetGame,
+    players,
   } = useGame();
   const { toast } = useToast();
   const [isReady, setIsReady] = useState(false);
@@ -48,30 +46,26 @@ const Lobby = () => {
   }, [playerInfo]);
 
   useEffect(() => {
-    socket.on('lobby-players', (updatedPlayers) => {
+    socket.on('lobby-players', (updatedPlayers: any[]) => {
       setPlayers(updatedPlayers);
     });
-
     return () => {
       socket.off('lobby-players');
     };
-  }, []);
+  }, [setPlayers]);
 
   useEffect(() => {
     const readyInterval = setInterval(() => {
-      if (players.length >= 2) {
-        setPlayers(prev =>
-          prev.map(player =>
-            !player.isHost && Math.random() > 0.5 && !player.isReady
-              ? { ...player, isReady: true }
-              : player
-          )
-        );
-      }
+      setPlayers(prev =>
+        prev.map(player =>
+          !player.isHost && Math.random() > 0.5 && !player.isReady
+            ? { ...player, isReady: true }
+            : player
+        )
+      );
     }, 2000);
-
     return () => clearInterval(readyInterval);
-  }, [players, setPlayers]);
+  }, [setPlayers]);
 
   const copyGameCode = () => {
     navigator.clipboard.writeText(gameCode);
@@ -82,11 +76,12 @@ const Lobby = () => {
   };
 
   const toggleReady = () => {
-    setIsReady(prev => !prev);
+    const newReady = !isReady;
+    setIsReady(newReady);
     socket.emit('player-ready', {
       gameCode,
       playerId: playerInfo.id,
-      isReady: !isReady,
+      isReady: newReady,
     });
   };
 

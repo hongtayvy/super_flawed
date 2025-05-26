@@ -1,0 +1,36 @@
+export interface PlayerType {
+  id: string;
+  name: string;
+  avatar: string;
+  isHost: boolean;
+  score: number;
+  isReady: boolean;
+}
+
+export interface CardType {
+  id: string;
+  text: string;
+}
+
+export interface SubmissionType {
+  playerId: string;
+  playerName: string;
+  card: CardType;
+}
+
+export interface WinnerType {
+  playerId: string;
+  playerName: string;
+  card: CardType;
+}
+
+export interface CurrentRoundType {
+  roundNumber: number;
+  cardCzarId: string;
+  isCardCzar: boolean;
+  blackCard: CardType;
+  hand: CardType[];
+  selectedCardIndex: number | null;
+  submissions: SubmissionType[];
+  winner: WinnerType | null;
+}

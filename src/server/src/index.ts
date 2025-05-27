@@ -31,6 +31,7 @@ io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
   socket.on('join-lobby', ({ gameCode, player }) => {
+    console.log(`[Server] Player joined:`, player.name, 'to lobby', gameCode);
     const code = gameCode.toLowerCase();
     if (!lobbyPlayers[code]) lobbyPlayers[code] = [];
 

@@ -5,12 +5,12 @@ import Button from '../components/ui/Button';
 import PlayerList from '../components/game/PlayerList';
 import { useGame } from '../contexts/GameContext';
 import { useToast } from '../hooks/useToast';
-import { socket } from '../socket';
+import { socket } from '../../../super_flawed/src/socket';
 
 const Lobby = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const gameCode = searchParams.get('code') || '';
+  const gameCode: string = searchParams.get('code') || '';  
   const {
     playerInfo,
     setPlayers,
@@ -28,22 +28,23 @@ const Lobby = () => {
     resetPlayers();
   }, []);
 
-  useEffect(() => {
-    if (!alreadyJoined.current && playerInfo.name && playerInfo.id) {
-      socket.emit('join-lobby', {
-        gameCode,
-        player: {
-          id: playerInfo.id,
-          name: playerInfo.name,
-          avatar: playerInfo.avatar,
-          isHost: playerInfo.isHost,
-          score: 0,
-          isReady: true,
-        },
-      });
-      alreadyJoined.current = true;
-    }
-  }, [playerInfo]);
+useEffect(() => {
+  if (!alreadyJoined.current && playerInfo.name && playerInfo.id && gameCode) {
+    console.log("Emitting join-lobby with:", gameCode, playerInfo);
+    socket.emit('join-lobby', {
+      gameCode,
+      player: {
+        id: playerInfo.id,
+        name: playerInfo.name,
+        avatar: playerInfo.avatar,
+        isHost: playerInfo.isHost,
+        score: 0,
+        isReady: true,
+      },
+    });
+    alreadyJoined.current = true;
+  }
+}, [playerInfo.id, playerInfo.name, playerInfo.avatar, playerInfo.isHost, gameCode]);
 
   useEffect(() => {
     socket.on('lobby-players', (updatedPlayers: any[]) => {

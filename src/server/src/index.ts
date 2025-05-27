@@ -16,12 +16,8 @@ app.use(cors({
 
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'https://teal-beignet-5557d3.netlify.app'
-    ],
-    methods: ['GET','POST'],
-    credentials: true
+    origin: '*',
+    methods: ['GET','POST']
   }
 });
 

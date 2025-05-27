@@ -6,5 +6,4 @@ const URL =
 
 export const socket = io(URL, {
   transports: ['websocket'],  // ← no more polling
-  withCredentials: true       // only needed if you rely on cookies/auth
 });

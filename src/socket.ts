@@ -7,3 +7,7 @@ const URL =
 export const socket = io(URL, {
   transports: ['websocket'],  // ← no more polling
 });
+
+socket.on('connect_error', (err) => {
+  console.error('Socket connect_error:', err);
+});

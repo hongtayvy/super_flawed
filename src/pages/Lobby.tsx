@@ -5,7 +5,7 @@ import Button from '../components/ui/Button';
 import PlayerList from '../components/game/PlayerList';
 import { useGame } from '../contexts/GameContext';
 import { useToast } from '../hooks/useToast';
-import { socket } from '../../../super_flawed/src/socket';
+import { socket } from '../socket';
 
 const Lobby = () => {
   const navigate = useNavigate();

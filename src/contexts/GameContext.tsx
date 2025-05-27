@@ -2,11 +2,13 @@ import React, { createContext, useContext, useState, ReactNode, Dispatch, SetSta
 import { PlayerType, CardType, CurrentRoundType } from '../types/game';
 import { blackCards, whiteCards } from '../utils/cardDecks';
 
-interface PlayerInfoType {
+export interface PlayerType {
   id: string;
   name: string;
   avatar: string;
   isHost: boolean;
+  score: number;
+  isReady: boolean;
 }
 
 interface GameContextType {

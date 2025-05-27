@@ -1,3 +1,4 @@
+// app/src/pages/Lobby.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, Play, Bot } from 'lucide-react';
@@ -7,10 +8,11 @@ import { useGame } from '../contexts/GameContext';
 import { useToast } from '../hooks/useToast';
 import { socket } from '../socket';
 
-const Lobby = () => {
+const Lobby: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const gameCode: string = searchParams.get('code') || '';  
+  const gameCode: string = (searchParams.get('code') || '').trim().toLowerCase();
+
   const {
     playerInfo,
     setPlayers,
@@ -24,79 +26,81 @@ const Lobby = () => {
   const alreadyJoined = useRef(false);
   const botsAdded = useRef(false);
 
+  // clear old players when mounting
   useEffect(() => {
     resetPlayers();
-  }, []);
+  }, [resetPlayers]);
 
-useEffect(() => {
-  if (!alreadyJoined.current && playerInfo.name && playerInfo.id && gameCode) {
-    console.log("Emitting join-lobby with:", gameCode, playerInfo);
-    socket.emit('join-lobby', {
-      gameCode,
-      player: {
-        id: playerInfo.id,
-        name: playerInfo.name,
-        avatar: playerInfo.avatar,
-        isHost: playerInfo.isHost,
-        score: 0,
-        isReady: true,
-      },
-    });
-    alreadyJoined.current = true;
-  }
-}, [playerInfo.id, playerInfo.name, playerInfo.avatar, playerInfo.isHost, gameCode]);
-
+  // auto-join once we have a code + playerInfo
   useEffect(() => {
-    socket.on('lobby-players', (updatedPlayers: any[]) => {
-      setPlayers(updatedPlayers);
-    });
+    if (!alreadyJoined.current && playerInfo.id && gameCode) {
+      socket.emit('join-lobby', {
+        gameCode,
+        player: {
+          id: playerInfo.id,
+          name: playerInfo.name,
+          avatar: playerInfo.avatar,
+          isHost: playerInfo.isHost,
+          score: 0,
+          isReady: false,
+        },
+      });
+      alreadyJoined.current = true;
+    }
+  }, [playerInfo, gameCode]);
 
-    socket.on('game-started', ({ gameCode }) => {
-      initializeGame(gameCode);
-      navigate(`/game/${gameCode}`);
+  // listen for lobby updates & game start / errors
+  useEffect(() => {
+    socket.on('lobby-players', (updated: any[]) => {
+      setPlayers(updated);
+    });
+    socket.on('lobby-error', ({ message }: { message: string }) => {
+      toast({ title: message, variant: 'destructive' });
+      navigate('/');
+    });
+    socket.on('game-started', ({ gameCode: code }: { gameCode: string }) => {
+      initializeGame(code);
+      navigate(`/game/${code}`);
     });
 
     return () => {
       socket.off('lobby-players');
+      socket.off('lobby-error');
       socket.off('game-started');
     };
-  }, [setPlayers]);
+  }, [setPlayers, initializeGame, toast, navigate]);
 
+  // simulate bots/other players ready randomly
   useEffect(() => {
-    const readyInterval = setInterval(() => {
+    const id = setInterval(() => {
       setPlayers(prev =>
-        prev.map(player =>
-          !player.isHost && Math.random() > 0.5 && !player.isReady
-            ? { ...player, isReady: true }
-            : player
+        prev.map(p =>
+          !p.isHost && Math.random() > 0.5 && !p.isReady
+            ? { ...p, isReady: true }
+            : p
         )
       );
     }, 2000);
-    return () => clearInterval(readyInterval);
+    return () => clearInterval(id);
   }, [setPlayers]);
 
   const copyGameCode = () => {
     navigator.clipboard.writeText(gameCode);
-    toast({
-      title: 'Game code copied!',
-      description: 'Share this with your friends so they can join.',
-    });
+    toast({ title: 'Copied!', description: 'Share this code.' });
   };
 
   const toggleReady = () => {
-    const newReady = !isReady;
-    setIsReady(newReady);
+    const val = !isReady;
+    setIsReady(val);
     socket.emit('player-ready', {
       gameCode,
       playerId: playerInfo.id,
-      isReady: newReady,
+      isReady: val,
     });
   };
 
   const startGame = () => {
-    if (playerInfo.isHost) {
-      socket.emit('start-game', { gameCode });
-    }
+    if (playerInfo.isHost) socket.emit('start-game', { gameCode });
   };
 
   const toggleBots = () => {
@@ -104,86 +108,67 @@ useEffect(() => {
     botsAdded.current = !botsAdded.current;
   };
 
-  const allPlayersReady = players.length >= 3 && players.every(p => p.isReady);
-  const canStartGame = playerInfo.isHost && allPlayersReady;
+  const allReady =
+    players.length >= 2 && players.every(p => p.isReady || p.isHost);
+  const canStart = playerInfo.isHost && allReady;
 
   return (
     <div className="max-w-4xl mx-auto p-4 pt-8">
       <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Game Lobby</h1>
-            <div className="flex items-center mt-2">
-              <span className="text-gray-300 mr-2">Game Code:</span>
-              <div className="bg-gray-700 px-3 py-1 rounded-md font-mono text-lg">{gameCode}</div>
-              <button
-                onClick={copyGameCode}
-                className="ml-2 p-1 text-gray-400 hover:text-white transition-colors"
-                aria-label="Copy game code"
-              >
-                <Copy size={18} />
-              </button>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Lobby: {gameCode}</h1>
+          <button onClick={copyGameCode} className="text-gray-400 hover:text-white">
+            <Copy size={20} />
+          </button>
+        </div>
 
-          <div className="flex gap-3">
-            {!playerInfo.isHost && (
-              <Button
-                onClick={toggleReady}
-                className={`px-4 py-2 ${isReady ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-700 hover:bg-gray-600'}`}
-              >
-                {isReady ? 'Ready!' : 'Mark as Ready'}
+        {/* Controls */}
+        <div className="flex gap-4 mb-6">
+          {!playerInfo.isHost && (
+            <Button onClick={toggleReady} className={isReady ? 'bg-green-600' : ''}>
+              {isReady ? 'Ready!' : 'Mark Ready'}
+            </Button>
+          )}
+          {playerInfo.isHost && (
+            <>
+              <Button onClick={toggleBots} className="bg-yellow-600">
+                <Bot size={16} className="mr-1" />
+                {botsAdded.current ? 'Remove Bots' : 'Add Bots'}
               </Button>
-            )}
-
-            {playerInfo.isHost && (
-              <>
-                <Button
-                  onClick={toggleBots}
-                  className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700"
-                >
-                  <Bot size={18} className="mr-2" />
-                  {botsAdded.current ? 'Remove Bots' : 'Add Bots'}
-                </Button>
-                <Button
-                  onClick={startGame}
-                  disabled={!canStartGame}
-                  className={`px-4 py-2 ${canStartGame ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-700 cursor-not-allowed'}`}
-                >
-                  <Play size={18} className="mr-2" />
-                  Start Game
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-gray-900 rounded-lg p-4 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Players</h2>
-          <PlayerList />
-        </div>
-
-        <div className="flex justify-end mt-4">
+              <Button onClick={startGame} disabled={!canStart} className="bg-indigo-600">
+                <Play size={16} className="mr-1" />
+                Start
+              </Button>
+            </>
+          )}
           <Button
             onClick={() => {
               resetGame();
               navigate('/');
             }}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600"
           >
-            Leave Lobby
+            Leave
           </Button>
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-4 mt-6">
+        {/* Player List */}
+        <div className="bg-gray-900 rounded-lg p-4 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Players</h2>
+          <PlayerList/>
+        </div>
+
+        {/* How to Play */}
+        <div className="bg-gray-900 rounded-lg p-4">
           <h2 className="text-xl font-semibold mb-2">How to Play</h2>
-          <div className="text-gray-300 space-y-3">
-            <p>1. Each round, one player is the Card Czar who reads the black card.</p>
-            <p>2. Everyone else plays a white card to complete the sentence or answer the question.</p>
-            <p>3. The Card Czar picks their favorite combination, and that player gets a point.</p>
-            <p>4. The role of Card Czar rotates each round.</p>
-            <p>5. First player to reach 10 points wins!</p>
-          </div>
+          <ol className="list-decimal pl-5 space-y-1 text-gray-300">
+            <li>Card Czar reads the black card.</li>
+            <li>Others submit a white card.</li>
+            <li>Czar picks the winner.</li>
+            <li>Czar role rotates.</li>
+            <li>First to 10 points wins.</li>
+          </ol>
         </div>
       </div>
     </div>

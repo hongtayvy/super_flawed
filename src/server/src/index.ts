@@ -7,16 +7,25 @@ import cors from 'cors';
 const app = express();
 const httpServer = createServer(app);
 
+// still fine to keep your express CORS for any REST endpoints
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://teal-beignet-5557d3.netlify.app'
+    'https://teal-beignet-5557d3.netlify.app',
   ],
   credentials: true,
 }));
 
+// this is the important part:
 const io = new Server(httpServer, {
-  cors: { origin: '*' }
+  cors: {
+    origin: [
+      'http://localhost:5173',
+      'https://teal-beignet-5557d3.netlify.app',
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true,
+  }
 });
 
 interface PlayerType {

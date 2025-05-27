@@ -1,4 +1,3 @@
-// server/index.ts
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -107,7 +106,10 @@ io.on('connection', socket => {
   });
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT
+  ? parseInt(process.env.PORT, 10)
+  : 4000;
+
 httpServer.listen(PORT, () => {
   console.log(`Socket server listening on port ${PORT}`);
-}); 
+});

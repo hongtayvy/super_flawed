@@ -29,7 +29,7 @@ const Lobby: React.FC = () => {
   // clear old players when mounting
   useEffect(() => {
     resetPlayers();
-  }, [resetPlayers]);
+  }, []);
 
   // auto-join once we have a code + playerInfo
   useEffect(() => {

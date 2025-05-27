@@ -1,15 +1,16 @@
+// app/src/socket.ts
 import { io } from 'socket.io-client';
 
 const URL = import.meta.env.PROD
-  // include port 8080 on prod
-  ? 'https://superflawed-production.up.railway.app:8080'
+  // NO :8080 here
+  ? 'https://superflawed-production.up.railway.app'
   : 'http://localhost:4000';
 
 export const socket = io(URL, {
-  transports: ['websocket'],  // WebSocket only
-  path: '/socket.io',         // defaults to /socket.io but safe to be explicit
+  transports: ['websocket'],  // WS only
+  path: '/socket.io',         // match your server
 });
 
-socket.on('connect_error', (err) => {
-  console.error('Socket connect_error:', err);
-});
+// add these so you can see exactly what’s happening
+socket.on('connect', () => console.log('✅ WS connected'));
+socket.on('connect_error', e => console.error('❌ WS error', e));

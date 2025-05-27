@@ -7,16 +7,14 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: 'https://teal-beignet-5557d3.netlify.app', // In production, use frontend URL here
+    origin: '*',
   },
 });
 
-app.use(
-  cors({
-    origin: ['http://localhost:5173', 'https://teal-beignet-5557d3.netlify.app'],
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://teal-beignet-5557d3.netlify.app'],
+  credentials: true,
+}));
 
 interface PlayerType {
   id: string;
@@ -30,60 +28,70 @@ interface PlayerType {
 const lobbyPlayers: Record<string, PlayerType[]> = {};
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('A user connected:', socket.id);
 
   socket.on('join-lobby', ({ gameCode, player }) => {
-    if (!lobbyPlayers[gameCode]) lobbyPlayers[gameCode] = [];
+    const code = gameCode.toLowerCase();
+    if (!lobbyPlayers[code]) lobbyPlayers[code] = [];
 
-    const alreadyInLobby = lobbyPlayers[gameCode].some(p => p.id === player.id);
+    const alreadyInLobby = lobbyPlayers[code].some(p => p.id === player.id);
     if (!alreadyInLobby) {
-      lobbyPlayers[gameCode].push(player);
+      lobbyPlayers[code].push(player);
     }
 
-    socket.join(gameCode);
-    io.to(gameCode).emit('lobby-players', lobbyPlayers[gameCode]);
+    socket.join(code);
+    io.to(code).emit('lobby-players', lobbyPlayers[code]);
   });
 
   socket.on('toggle-bots', ({ gameCode }) => {
-    const bots = [
-      { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false },
-      { id: 'rengo', name: 'Rengo Yang', avatar: '4', isHost: false, score: 0, isReady: false },
-      { id: 'yeng', name: 'Yeng Chang', avatar: '3', isHost: false, score: 0, isReady: false },
-      { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false }
-    ];
-
-    if (!lobbyPlayers[gameCode]) return;
-
-    const botIds = bots.map(bot => bot.id);
-    const botsExist = lobbyPlayers[gameCode].some(p => botIds.includes(p.id));
+    const code = gameCode.toLowerCase();
+    const botIds = ['sarah', 'jordan', 'morgan'];
+    const botsExist = lobbyPlayers[code]?.some(p => botIds.includes(p.id));
+    if (!lobbyPlayers[code]) return;
 
     if (botsExist) {
-      lobbyPlayers[gameCode] = lobbyPlayers[gameCode].filter(p => !botIds.includes(p.id));
+      lobbyPlayers[code] = lobbyPlayers[code].filter(p => !botIds.includes(p.id));
     } else {
-      lobbyPlayers[gameCode] = [...lobbyPlayers[gameCode], ...bots];
+      lobbyPlayers[code].push(
+        { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false },
+        { id: 'rengo', name: 'Rengo Yang', avatar: '4', isHost: false, score: 0, isReady: false },
+        { id: 'yeng', name: 'Yeng Chang', avatar: '3', isHost: false, score: 0, isReady: false },
+        { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false }
+      );
     }
 
-    io.to(gameCode).emit('lobby-players', lobbyPlayers[gameCode]);
+    io.to(code).emit('lobby-players', lobbyPlayers[code]);
   });
 
   socket.on('player-ready', ({ gameCode, playerId, isReady }) => {
-    const lobby = lobbyPlayers[gameCode];
+    const code = gameCode.toLowerCase();
+    const lobby = lobbyPlayers[code];
     if (!lobby) return;
 
-    lobbyPlayers[gameCode] = lobby.map(player =>
+    lobbyPlayers[code] = lobby.map(player =>
       player.id === playerId ? { ...player, isReady } : player
     );
 
-    io.to(gameCode).emit('lobby-players', lobbyPlayers[gameCode]);
+    io.to(code).emit('lobby-players', lobbyPlayers[code]);
+  });
+
+  socket.on('start-game', ({ gameCode }) => {
+    const code = gameCode.toLowerCase();
+    io.to(code).emit('game-started');
+  });
+
+  socket.on('leave-lobby', ({ gameCode, playerId }) => {
+    const code = gameCode.toLowerCase();
+    lobbyPlayers[code] = (lobbyPlayers[code] || []).filter(p => p.id !== playerId);
+    io.to(code).emit('lobby-players', lobbyPlayers[code]);
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
-    // Optional: clean up user from lobbies if desired
   });
 });
 
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
-  console.log(`✅ Socket server listening on port ${PORT}`);
+  console.log(`Socket server listening on port ${PORT}`);
 });

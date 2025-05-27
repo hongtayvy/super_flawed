@@ -49,8 +49,15 @@ const Lobby = () => {
     socket.on('lobby-players', (updatedPlayers: any[]) => {
       setPlayers(updatedPlayers);
     });
+
+    socket.on('game-started', ({ gameCode }) => {
+      initializeGame(gameCode);
+      navigate(`/game/${gameCode}`);
+    });
+
     return () => {
       socket.off('lobby-players');
+      socket.off('game-started');
     };
   }, [setPlayers]);
 
@@ -86,9 +93,9 @@ const Lobby = () => {
   };
 
   const startGame = () => {
-    socket.emit('start-game', { gameCode });
-    initializeGame(gameCode);
-    navigate(`/game/${gameCode}`);
+    if (playerInfo.isHost) {
+      socket.emit('start-game', { gameCode });
+    }
   };
 
   const toggleBots = () => {

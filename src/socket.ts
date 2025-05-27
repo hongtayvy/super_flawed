@@ -1,4 +1,2 @@
-// src/socket.ts
 import { io } from 'socket.io-client';
-
-export const socket = io('https://teal-beignet-5557d3.netlify.app/');
+export const socket = io('superflawed-production.up.railway.app'); // Replace with Railway or local backend

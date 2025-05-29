@@ -58,6 +58,7 @@ io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
   socket.on('join-room', ({ gameCode, player }: { gameCode: string; player: PlayerType }) => {
+    console.log('Player ' + player.name  + ' joined room ' + gameCode);
     const code = gameCode.toLowerCase();
     if (!games[code]) {
       games[code] = {

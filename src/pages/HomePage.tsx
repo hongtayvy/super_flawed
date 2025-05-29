@@ -15,7 +15,6 @@ const HomePage = () => {
   const [gameCode, setGameCode] = useState('');
 
   const handleCreateGame = (playerName: string, playerAvatar: string) => {
-    console.log('[handleCreateGame] Called with:', playerName, playerAvatar);
     const id = crypto.randomUUID();
     const newGameCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -28,6 +27,8 @@ const HomePage = () => {
       isReady: true,
       isBot: false,
     };
+
+    console.log('[CreateGame] Setting playerInfo and emitting join-room for', player.name, newGameCode);
 
     setPlayerInfo(player);
     socket.emit('join-room', { gameCode: newGameCode, player });

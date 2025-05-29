@@ -31,7 +31,9 @@ const HomePage = () => {
     setPlayerInfo(player);
     socket.emit('join-room', { gameCode: newGameCode, player }); // ✅ join socket room
     setIsCreateModalOpen(false);
-    navigate(`/lobby?code=${newGameCode}`);
+    setTimeout(() => {
+      navigate(`/lobby?code=${gameCode}`);
+    } , 100);
   };
 
   const handleJoinGame = (playerName: string, playerAvatar: string) => {

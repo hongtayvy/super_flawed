@@ -34,6 +34,8 @@ const Lobby: React.FC = () => {
   // auto-join once we have a code + playerInfo
 
   useEffect(() => {
+
+    console.log('[useEffect] playerInfo:', playerInfo, 'alreadyJoined:', alreadyJoined.current, 'gameCode:', gameCode);
     if (!alreadyJoined.current && playerInfo.id && gameCode) {
 
       console.log('[Client] Emitting join-room:', gameCode, playerInfo);

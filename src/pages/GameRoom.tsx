@@ -6,7 +6,7 @@ import ScoreBoard from '../components/game/ScoreBoard';
 import GameChat from '../components/game/GameChat';
 import RoundInfo from '../components/game/RoundInfo';
 import { useGame } from '../contexts/GameContext';
-import { socket } from '../socket'; // ✅ import the socket
+import { socket } from '../socket';
 
 const GameRoom = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -25,6 +25,19 @@ const GameRoom = () => {
   } = useGame();
 
   const [showScoreboard, setShowScoreboard] = useState(false);
+
+  // ✅ Join the actual game lobby instead of an untracked "room"
+  useEffect(() => {
+    if (gameId && playerInfo.name) {
+      socket.emit('join-lobby', { gameCode: gameId, player: playerInfo });
+    }
+
+    return () => {
+      if (gameId) {
+        socket.emit('leave-lobby', { gameCode: gameId, playerId: playerInfo.id });
+      }
+    };
+  }, [gameId, playerInfo]);
 
   useEffect(() => {
     if (gameState === 'roundEnd' && currentRound.winner) {
@@ -70,16 +83,6 @@ const GameRoom = () => {
       }
     }
   }, [gameState, currentRound, players, selectWinner]);
-
-  // ✅ Join the game room for scoped messages/chat
-  useEffect(() => {
-    if (gameId) {
-      socket.emit('join-room', { gameId });
-    }
-    return () => {
-      socket.emit('leave-room', { gameId });
-    };
-  }, [gameId]);
 
   return (
     <div className="max-w-7xl mx-auto p-2 md:p-4 h-[calc(100vh-64px)] flex flex-col">

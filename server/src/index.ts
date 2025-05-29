@@ -1,6 +1,4 @@
 // 📁 server/index.ts
-// Add player joins & session-persistent game state
-
 import session from 'express-session';
 import express from 'express';
 import { createServer } from 'http';
@@ -15,12 +13,11 @@ const allowedOrigins = ['https://teal-beignet-5557d3.netlify.app'];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 
-// ✅ Add session middleware
 app.use(session({
   secret: 'superflawed-secret',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } // ⚠️ for production, set secure: true over HTTPS
+  cookie: { secure: false }
 }));
 
 const io = new Server(httpServer, {
@@ -57,7 +54,6 @@ interface GameState {
 
 const games: Record<string, GameState> = {};
 
-// ✅ Player joins with session support
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
@@ -79,6 +75,45 @@ io.on('connection', (socket) => {
     io.to(code).emit('lobby-players', games[code].players);
   });
 
+  socket.on('player-ready', ({ gameCode, playerId, isReady }) => {
+    const code = gameCode.toLowerCase();
+    if (!games[code]) return;
+
+    games[code].players = games[code].players.map(p =>
+      p.id === playerId ? { ...p, isReady } : p
+    );
+
+    io.to(code).emit('lobby-players', games[code].players);
+  });
+
+  socket.on('toggle-bots', ({ gameCode }) => {
+    const code = gameCode.toLowerCase();
+    if (!games[code]) return;
+
+    const bots: PlayerType[] = [
+      { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false, isBot: true },
+      { id: 'rengo', name: 'Rengo Yang', avatar: '4', isHost: false, score: 0, isReady: false, isBot: true },
+      { id: 'yeng', name: 'Yeng Chang', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
+      { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
+    ];
+
+    const currentPlayers = games[code].players;
+    const hasBots = currentPlayers.some(p => bots.map(b => b.id).includes(p.id));
+
+    games[code].players = hasBots
+      ? currentPlayers.filter(p => !p.isBot)
+      : [...currentPlayers, ...bots];
+
+    io.to(code).emit('lobby-players', games[code].players);
+  });
+
+  socket.on('start-game', ({ gameCode }) => {
+    const code = gameCode.toLowerCase();
+    if (!games[code]) return;
+
+    io.to(code).emit('game-started', { gameCode: code });
+  });
+
   socket.on('submit-card', ({ gameCode, submission }) => {
     const code = gameCode.toLowerCase();
     const existing = games[code].submissions.findIndex(s => s.playerId === submission.playerId);
@@ -98,7 +133,7 @@ io.on('connection', (socket) => {
 
     games[code].hands = hands;
     games[code].scores = scores;
-    games[code].submissions = []; // reset
+    games[code].submissions = [];
 
     io.to(code).emit('start-round', { round, hands, scores });
   });

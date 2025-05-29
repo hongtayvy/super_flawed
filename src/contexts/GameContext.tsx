@@ -101,28 +101,35 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setGameState('roundEnd');
     });
 
-    socket.on('start-round', ({ round, hands, scores }) => {
-      const isCardCzar = round.cardCzarId === playerInfo.id;
-      const myHand = hands[playerInfo.id] || [];
+  socket.on('start-round', (data) => {
+    const { round, hands, scores } = data || {};
 
-      setPlayers((prev) =>
-        prev.map((p) => ({
-          ...p,
-          score: scores[p.id] ?? p.score,
-        }))
-      );
+    if (!round || !hands || !scores) {
+      console.error('❌ Invalid start-round payload:', data);
+      return;
+    }
 
-      setCurrentRound({
-        ...round,
-        isCardCzar,
-        hand: myHand,
-        selectedCardIndex: null,
-        submissions: [],
-        winner: null,
-      });
+    const isCardCzar = round.cardCzarId === playerInfo.id;
+    const myHand = hands[playerInfo.id] || [];
 
-      setGameState('selecting');
+    setPlayers((prev) =>
+      prev.map((p) => ({
+        ...p,
+        score: scores[p.id] ?? p.score,
+      }))
+    );
+
+    setCurrentRound({
+      ...round,
+      isCardCzar,
+      hand: myHand,
+      selectedCardIndex: null,
+      submissions: [],
+      winner: null,
     });
+
+    setGameState('selecting');
+  });
 
     return () => {
       socket.off('update-submissions');

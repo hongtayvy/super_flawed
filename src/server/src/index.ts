@@ -8,12 +8,23 @@ const httpServer = createServer(app);
 
 const allowedOrigins = ['https://teal-beignet-5557d3.netlify.app'];
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
+// ✅ Handle preflight CORS
+app.options('*', cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
+// ✅ Explicitly set headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
 
 const io = new Server(httpServer, {
   cors: {
@@ -36,7 +47,7 @@ const lobbyPlayers: Record<string, PlayerType[]> = {};
 const MAX_PLAYERS = 4;
 
 io.on('connection', socket => {
-  console.log('A user connected:', socket.id);
+  console.log('✅ A user connected:', socket.id);
 
   socket.on('join-lobby', ({ gameCode, player }: { gameCode: string; player: PlayerType }) => {
     const code = gameCode.toLowerCase();
@@ -48,16 +59,14 @@ io.on('connection', socket => {
       lobbyPlayers[code] = [player];
       socket.join(code);
       socket.emit('lobby-players', lobbyPlayers[code]);
-    }
-    else if (numClients < MAX_PLAYERS) {
+    } else if (numClients < MAX_PLAYERS) {
       // join existing
       if (!lobbyPlayers[code].some(p => p.id === player.id)) {
         lobbyPlayers[code].push(player);
       }
       socket.join(code);
       io.to(code).emit('lobby-players', lobbyPlayers[code]);
-    }
-    else {
+    } else {
       // full
       socket.emit('lobby-error', { message: 'Lobby is full.' });
     }
@@ -99,15 +108,18 @@ io.on('connection', socket => {
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-    // (Optional) scan all rooms to remove this socket’s player
+    console.log('❌ User disconnected:', socket.id);
+    // Optional cleanup could go here
   });
 });
 
-const PORT = process.env.PORT
-  ? parseInt(process.env.PORT, 10)
-  : 4000;
+// ✅ Keepalive/test route
+app.get('/', (_, res) => {
+  res.send('Super Flawed backend is running 🚀');
+});
+
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
 
 httpServer.listen(PORT, () => {
-  console.log(`Socket server listening on port ${PORT}`);
+  console.log(`✅ Socket server listening on port ${PORT}`);
 });

@@ -67,6 +67,8 @@ io.on('connection', (socket) => {
       };
     }
 
+    console.log('[Server] Current players in room', code, games[code].players.map(p => p.name));
+
     const existing = games[code].players.find(p => p.id === player.id);
     if (!existing) {
       // ✅ Defensive check: ensure required fields exist

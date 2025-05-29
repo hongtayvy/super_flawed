@@ -29,11 +29,12 @@ const HomePage = () => {
     };
 
     setPlayerInfo(player);
-    socket.emit('join-room', { gameCode: newGameCode, player }); // ✅ join socket room
+    socket.emit('join-room', { gameCode: newGameCode, player });
     setIsCreateModalOpen(false);
+
     setTimeout(() => {
-      navigate(`/lobby?code=${gameCode}`);
-    } , 100);
+      navigate(`/lobby?code=${newGameCode}`); // ✅ fixed
+    }, 100);
   };
 
   const handleJoinGame = (playerName: string, playerAvatar: string) => {

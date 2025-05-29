@@ -57,8 +57,9 @@ const games: Record<string, GameState> = {};
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
-  socket.on('join-room', ({ gameCode, player }: { gameCode: string; player: PlayerType }) => {
-    console.log('Player ' + player.name  + ' joined room ' + gameCode);
+  socket.on('join-room', ({ gameCode, player }) => {
+    console.log('Player', player.name, 'joined room', gameCode); // ✅ Add logging here
+
     const code = gameCode.toLowerCase();
     if (!games[code]) {
       games[code] = {
@@ -68,6 +69,12 @@ io.on('connection', (socket) => {
 
     const existing = games[code].players.find(p => p.id === player.id);
     if (!existing) {
+      // ✅ Defensive check: ensure required fields exist
+      if (!player.id || !player.name) {
+        console.warn('❌ Invalid player tried to join:', player);
+        return;
+      }
+
       games[code].players.push(player);
       games[code].scores[player.id] = 0;
     }

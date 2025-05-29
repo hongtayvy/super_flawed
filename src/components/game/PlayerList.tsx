@@ -1,4 +1,3 @@
-import React from 'react';
 import { Crown, Check } from 'lucide-react';
 import { useGame } from '../../contexts/GameContext';
 import { motion } from 'framer-motion';

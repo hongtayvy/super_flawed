@@ -1,4 +1,3 @@
-import React from 'react';
 import { X, Trophy, Crown } from 'lucide-react';
 import { PlayerType } from '../../types/game';
 import { motion, AnimatePresence } from 'framer-motion';

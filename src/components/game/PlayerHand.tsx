@@ -1,4 +1,3 @@
-import React from 'react';
 import WhiteCard from '../cards/WhiteCard';
 import Button from '../ui/Button';
 import { CardType } from '../../types/game';

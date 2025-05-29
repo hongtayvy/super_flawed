@@ -1,5 +1,5 @@
 // app/src/pages/Lobby.tsx
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, Play, Bot } from 'lucide-react';
 import Button from '../components/ui/Button';

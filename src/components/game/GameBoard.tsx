@@ -1,4 +1,3 @@
-import React from 'react';
 import BlackCard from '../cards/BlackCard';
 import WhiteCard from '../cards/WhiteCard';
 import { useGame } from '../../contexts/GameContext';

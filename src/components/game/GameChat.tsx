@@ -17,7 +17,7 @@ interface ChatMessage {
 }
 
 const GameChat = ({ gameId }: GameChatProps) => {
-  const { players, playerInfo } = useGame();
+  const { playerInfo } = useGame();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);

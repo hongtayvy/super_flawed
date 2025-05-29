@@ -44,7 +44,7 @@ interface PlayerType {
 }
 
 const lobbyPlayers: Record<string, PlayerType[]> = {};
-const MAX_PLAYERS = 4;
+const MAX_PLAYERS = 16;
 
 io.on('connection', socket => {
   console.log('✅ A user connected:', socket.id);

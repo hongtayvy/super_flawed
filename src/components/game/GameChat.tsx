@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { useGame } from '../../contexts/GameContext';
+import { socket } from '../../socket';
 
 interface GameChatProps {
   gameId: string;
@@ -25,31 +26,25 @@ const GameChat = ({ gameId }: GameChatProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Simulate system messages for game events
+  // System welcome message
   useEffect(() => {
-    // Initial welcome message
     if (messages.length === 0) {
       addSystemMessage(`Welcome to game ${gameId}! Good luck and have fun!`);
-      
-      // Add some fake chat messages after a delay
-      setTimeout(() => {
-        const demoMessages = [
-          { playerId: '2', text: 'Hey everyone!' },
-          { playerId: '3', text: 'Good luck!' },
-          { playerId: '4', text: 'This is going to be fun!' },
-        ];
-        
-        demoMessages.forEach((msg, index) => {
-          setTimeout(() => {
-            const player = players.find(p => p.id === msg.playerId);
-            if (player) {
-              addPlayerMessage(player.id, player.name, msg.text);
-            }
-          }, index * 1000);
-        });
-      }, 1000);
     }
-  }, [gameId, players, messages.length]);
+  }, [gameId, messages.length]);
+
+  // Receive chat messages from server
+  useEffect(() => {
+    const onChatMessage = ({ message }: { message: ChatMessage }) => {
+      setMessages(prev => [...prev, message]);
+    };
+
+    socket.on('chat-message', onChatMessage);
+
+    return () => {
+      socket.off('chat-message', onChatMessage);
+    };
+  }, []);
 
   const addSystemMessage = (text: string) => {
     setMessages(prev => [
@@ -64,44 +59,19 @@ const GameChat = ({ gameId }: GameChatProps) => {
     ]);
   };
 
-  const addPlayerMessage = (playerId: string, playerName: string, text: string) => {
-    setMessages(prev => [
-      ...prev,
-      {
-        id: `msg-${Date.now()}-${Math.random()}`,
-        playerId,
-        playerName,
-        text,
-        timestamp: Date.now()
-      }
-    ]);
-  };
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() && playerInfo.name) {
-      addPlayerMessage('1', playerInfo.name, newMessage.trim());
+      const message: ChatMessage = {
+        id: `msg-${Date.now()}-${Math.random()}`,
+        playerId: playerInfo.id,
+        playerName: playerInfo.name,
+        text: newMessage.trim(),
+        timestamp: Date.now()
+      };
+
+      socket.emit('chat-message', { gameId, message });
       setNewMessage('');
-      
-      // Simulate a response from another player
-      const randomPlayerId = ['2', '3', '4'][Math.floor(Math.random() * 3)];
-      const randomResponses = [
-        'lol',
-        'Nice one!',
-        'Haha!',
-        'Good luck with that card!',
-        'I\'m going to win this round!',
-        'That\'s a tough black card',
-        'This is fun!'
-      ];
-      const randomResponse = randomResponses[Math.floor(Math.random() * randomResponses.length)];
-      
-      setTimeout(() => {
-        const player = players.find(p => p.id === randomPlayerId);
-        if (player) {
-          addPlayerMessage(player.id, player.name, randomResponse);
-        }
-      }, 2000 + Math.random() * 3000);
     }
   };
 
@@ -110,21 +80,21 @@ const GameChat = ({ gameId }: GameChatProps) => {
       <div className="p-3 border-b border-gray-700">
         <h3 className="text-lg font-medium">Game Chat</h3>
       </div>
-      
+
       <div className="flex-grow overflow-y-auto p-3">
         <div className="space-y-3">
           {messages.map(message => (
-            <div key={message.id} className={`flex ${message.playerId === '1' ? 'justify-end' : ''}`}>
+            <div key={message.id} className={`flex ${message.playerId === playerInfo.id ? 'justify-end' : ''}`}>
               <div 
                 className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                   message.playerId === 'system' 
                     ? 'bg-gray-700 text-gray-300 italic' 
-                    : message.playerId === '1'
+                    : message.playerId === playerInfo.id
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-700 text-white'
                 }`}
               >
-                {message.playerId !== 'system' && message.playerId !== '1' && (
+                {message.playerId !== 'system' && message.playerId !== playerInfo.id && (
                   <div className="font-medium text-xs text-gray-300 mb-1">
                     {message.playerName}
                   </div>
@@ -136,7 +106,7 @@ const GameChat = ({ gameId }: GameChatProps) => {
           <div ref={messagesEndRef} />
         </div>
       </div>
-      
+
       <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-700 flex">
         <input
           type="text"

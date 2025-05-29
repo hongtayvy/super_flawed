@@ -6,6 +6,7 @@ import ScoreBoard from '../components/game/ScoreBoard';
 import GameChat from '../components/game/GameChat';
 import RoundInfo from '../components/game/RoundInfo';
 import { useGame } from '../contexts/GameContext';
+import { socket } from '../socket'; // ✅ import the socket
 
 const GameRoom = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -69,6 +70,16 @@ const GameRoom = () => {
       }
     }
   }, [gameState, currentRound, players, selectWinner]);
+
+  // ✅ Join the game room for scoped messages/chat
+  useEffect(() => {
+    if (gameId) {
+      socket.emit('join-room', { gameId });
+    }
+    return () => {
+      socket.emit('leave-room', { gameId });
+    };
+  }, [gameId]);
 
   return (
     <div className="max-w-7xl mx-auto p-2 md:p-4 h-[calc(100vh-64px)] flex flex-col">

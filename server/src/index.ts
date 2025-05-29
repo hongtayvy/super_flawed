@@ -34,13 +34,14 @@ const io = new Server(httpServer, {
   },
 });
 
-interface PlayerType {
+export interface PlayerType {
   id: string;
   name: string;
   avatar: string;
   isHost: boolean;
   score: number;
   isReady: boolean;
+  isBot: boolean;
 }
 
 const lobbyPlayers: Record<string, PlayerType[]> = {};
@@ -75,10 +76,10 @@ io.on('connection', socket => {
   socket.on('toggle-bots', ({ gameCode }: { gameCode: string }) => {
     const code = gameCode.toLowerCase();
     const bots: PlayerType[] = [
-      { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false },
-      { id: 'rengo', name: 'Rengo Yang', avatar: '4', isHost: false, score: 0, isReady: false },
-      { id: 'yeng', name: 'Yeng Chang', avatar: '3', isHost: false, score: 0, isReady: false },
-      { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false },
+      { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false , isBot: true},
+      { id: 'rengo', name: 'Rengo Yang', avatar: '4', isHost: false, score: 0, isReady: false, isBot: true },
+      { id: 'yeng', name: 'Yeng Chang', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
+      { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true},
     ];
     const lobby = lobbyPlayers[code] || [];
     const hasBots = lobby.some(p => bots.map(b => b.id).includes(p.id));

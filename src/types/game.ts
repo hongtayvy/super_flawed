@@ -1,4 +1,5 @@
 export interface PlayerType {
+  isBot: boolean;
   id: string;
   name: string;
   avatar: string;

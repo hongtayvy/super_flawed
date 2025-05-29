@@ -41,7 +41,7 @@ const GameRoom = () => {
   // Join lobby for game events and chat
   useEffect(() => {
     if (gameId && playerInfo.name) {
-      socket.emit('join-lobby', { gameCode: gameId, player: playerInfo });
+      socket.emit('join-room', { gameCode: gameId, player: playerInfo });
     }
     return () => {
       if (gameId) {

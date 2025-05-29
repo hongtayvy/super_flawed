@@ -148,6 +148,15 @@ socket.on('join-room', ({ gameCode, player }, callback) => {
     games[code].scores[winner.playerId] = (games[code].scores[winner.playerId] || 0) + 1;
     io.to(code).emit('update-winner', winner);
   });
+
+  socket.on('chat-message', ({ gameCode, message }) => {
+    const code = gameCode.toLowerCase();
+    if (!games[code]) {
+      games[code] = { players: [], submissions: [], chat: [], scores: {}, hands: {} };
+    }
+    games[code].chat.push(message);
+    io.to(code).emit('chat-message', message);
+  });
 });
 
 app.get('/', (_, res) => {

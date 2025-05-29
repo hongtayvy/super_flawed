@@ -13,13 +13,11 @@ app.use(cors({
   credentials: true,
 }));
 
-// ✅ Handle preflight CORS
 app.options('*', cors({
   origin: allowedOrigins,
   credentials: true,
 }));
 
-// ✅ Explicitly set headers
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -44,22 +42,32 @@ interface PlayerType {
   isBot: boolean;
 }
 
-const lobbyPlayers: Record<string, PlayerType[]> = {};
+interface CardType {
+  id: string;
+  text: string;
+  [key: string]: any;
+}
 
 interface CardSubmission {
   playerId: string;
-  card: {
-    id: string;
-    text: string;
-    [key: string]: any;
-  };
+  card: CardType;
 }
 
-// Store game state in memory (you can replace this with a proper DB later)
+interface ChatMessage {
+  id: string;
+  playerId: string;
+  playerName: string;
+  text: string;
+  timestamp: number;
+}
+
+const lobbyPlayers: Record<string, PlayerType[]> = {};
+
 const games: Record<string, {
   submissions: CardSubmission[];
-  // ...other game state fields (players, current round, etc.)
+  chat: ChatMessage[];
 }> = {};
+
 const MAX_PLAYERS = 16;
 
 io.on('connection', socket => {
@@ -71,19 +79,16 @@ io.on('connection', socket => {
     const numClients = room ? room.size : 0;
 
     if (numClients === 0) {
-      // first player — create lobby
       lobbyPlayers[code] = [player];
       socket.join(code);
       socket.emit('lobby-players', lobbyPlayers[code]);
     } else if (numClients < MAX_PLAYERS) {
-      // join existing
       if (!lobbyPlayers[code].some(p => p.id === player.id)) {
         lobbyPlayers[code].push(player);
       }
       socket.join(code);
       io.to(code).emit('lobby-players', lobbyPlayers[code]);
     } else {
-      // full
       socket.emit('lobby-error', { message: 'Lobby is full.' });
     }
   });
@@ -91,10 +96,10 @@ io.on('connection', socket => {
   socket.on('toggle-bots', ({ gameCode }: { gameCode: string }) => {
     const code = gameCode.toLowerCase();
     const bots: PlayerType[] = [
-      { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false , isBot: true},
+      { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false, isBot: true },
       { id: 'rengo', name: 'Rengo Yang', avatar: '4', isHost: false, score: 0, isReady: false, isBot: true },
       { id: 'yeng', name: 'Yeng Chang', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
-      { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true},
+      { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
     ];
     const lobby = lobbyPlayers[code] || [];
     const hasBots = lobby.some(p => bots.map(b => b.id).includes(p.id));
@@ -116,6 +121,28 @@ io.on('connection', socket => {
     io.to(gameCode.toLowerCase()).emit('game-started', { gameCode });
   });
 
+  socket.on('submit-card', ({ gameCode, submission }: { gameCode: string; submission: CardSubmission }) => {
+    const code = gameCode.toLowerCase();
+    if (!games[code]) games[code] = { submissions: [], chat: [] };
+
+    const existingIndex = games[code].submissions.findIndex(s => s.playerId === submission.playerId);
+    if (existingIndex !== -1) {
+      games[code].submissions[existingIndex] = submission;
+    } else {
+      games[code].submissions.push(submission);
+    }
+
+    io.to(code).emit('update-submissions', games[code].submissions);
+  });
+
+  socket.on('chat-message', ({ gameCode, message }: { gameCode: string; message: ChatMessage }) => {
+    const code = gameCode.toLowerCase();
+    if (!games[code]) games[code] = { submissions: [], chat: [] };
+
+    games[code].chat.push(message);
+    io.to(code).emit('chat-message', message);
+  });
+
   socket.on('leave-lobby', ({ gameCode, playerId }: { gameCode: string; playerId: string }) => {
     const code = gameCode.toLowerCase();
     lobbyPlayers[code] = (lobbyPlayers[code] || []).filter(p => p.id !== playerId);
@@ -125,7 +152,6 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     console.log('❌ User disconnected:', socket.id);
-    // Optional cleanup could go here
   });
 });
 

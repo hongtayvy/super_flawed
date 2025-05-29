@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, Dispatch, SetStateAction, useEffect } from 'react';
-import { PlayerInfoType, PlayerType, CardType, CurrentRoundType } from '../types/game';
+import { PlayerInfoType, PlayerType, CardType, CurrentRoundType, WinnerType } from '../types/game';
 import { blackCards, whiteCards } from '../utils/cardDecks';
-import { socket } from '../socket'; // ✅ added socket
+import { socket } from '../socket';
 
 interface GameContextType {
   playerInfo: PlayerInfoType;
@@ -31,7 +31,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const [players, setPlayers] = useState<PlayerType[]>([]);
   const [gameState, setGameState] = useState<string>('idle');
-
   const [currentRound, setCurrentRound] = useState<CurrentRoundType>({
     roundNumber: 1,
     cardCzarId: '',
@@ -58,14 +57,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [playerInfo, players]);
 
-  // ✅ Listen for updates to submissions via socket
   useEffect(() => {
     socket.on('update-submissions', (newSubmissions: CurrentRoundType['submissions']) => {
       setCurrentRound(prev => ({ ...prev, submissions: newSubmissions }));
     });
 
+    socket.on('update-winner', (winner: WinnerType) => {
+      setCurrentRound(prev => ({ ...prev, winner }));
+      setGameState('roundEnd');
+    });
+
     return () => {
       socket.off('update-submissions');
+      socket.off('update-winner');
     };
   }, []);
 
@@ -73,10 +77,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const cardCzarId = players[0]?.id || '';
     const isCardCzar = cardCzarId === playerInfo.id;
     const blackCard = blackCards[Math.floor(Math.random() * blackCards.length)];
-
     const dealtCards: CardType[] = [];
     const usedIndices = new Set<number>();
-
     while (dealtCards.length < 7) {
       const randomIndex = Math.floor(Math.random() * whiteCards.length);
       if (!usedIndices.has(randomIndex)) {
@@ -84,7 +86,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         dealtCards.push(whiteCards[randomIndex]);
       }
     }
-
     setGameState('selecting');
     setCurrentRound({
       roundNumber: 1,
@@ -126,7 +127,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setCurrentRound(prev => ({ ...prev, submissions: newSubmissions }));
-    socket.emit('update-submissions', newSubmissions); // ✅ emit submission update
+    socket.emit('update-submissions', newSubmissions);
 
     if (newSubmissions.length === players.length - 1) {
       setGameState('judging');
@@ -148,16 +149,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       )
     );
 
+    const winner: WinnerType = {
+      playerId,
+      playerName: winningSubmission.playerName,
+      card: winningSubmission.card,
+    };
+
     setCurrentRound(prev => ({
       ...prev,
-      winner: {
-        playerId,
-        playerName: winningSubmission.playerName,
-        card: winningSubmission.card,
-      },
+      winner,
     }));
 
     setGameState('roundEnd');
+    socket.emit('update-winner', winner);
   };
 
   const nextRound = () => {
@@ -166,7 +170,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const nextCardCzarId = players[nextCzarIndex]?.id || '';
     const isCardCzar = nextCardCzarId === playerInfo.id;
     const blackCard = blackCards[Math.floor(Math.random() * blackCards.length)];
-
     let newHand = [...currentRound.hand];
 
     if (currentRound.selectedCardIndex !== null && !currentRound.isCardCzar) {

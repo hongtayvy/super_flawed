@@ -135,6 +135,18 @@ io.on('connection', socket => {
     io.to(code).emit('update-submissions', games[code].submissions);
   });
 
+  socket.on('start-round', ({ gameCode, roundNumber, cardCzarId, blackCard, hands, scores }) => {
+    const code = gameCode.toLowerCase();
+
+    io.to(code).emit('start-round', {
+      roundNumber,
+      cardCzarId,
+      blackCard,
+      hands,
+      scores,
+    });
+  });
+
   socket.on('chat-message', ({ gameCode, message }: { gameCode: string; message: ChatMessage }) => {
     const code = gameCode.toLowerCase();
     if (!games[code]) games[code] = { submissions: [], chat: [] };

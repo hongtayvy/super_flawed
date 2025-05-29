@@ -34,7 +34,7 @@ const io = new Server(httpServer, {
   },
 });
 
-export interface PlayerType {
+interface PlayerType {
   id: string;
   name: string;
   avatar: string;
@@ -45,6 +45,21 @@ export interface PlayerType {
 }
 
 const lobbyPlayers: Record<string, PlayerType[]> = {};
+
+interface CardSubmission {
+  playerId: string;
+  card: {
+    id: string;
+    text: string;
+    [key: string]: any;
+  };
+}
+
+// Store game state in memory (you can replace this with a proper DB later)
+const games: Record<string, {
+  submissions: CardSubmission[];
+  // ...other game state fields (players, current round, etc.)
+}> = {};
 const MAX_PLAYERS = 16;
 
 io.on('connection', socket => {

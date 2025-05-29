@@ -35,3 +35,10 @@ export interface CurrentRoundType {
   submissions: SubmissionType[];
   winner: WinnerType | null;
 }
+
+export interface PlayerInfoType {
+  id: string;
+  name: string;
+  avatar: string;
+  isHost: boolean;
+}

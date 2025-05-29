@@ -1,15 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, Dispatch, SetStateAction, useEffect } from 'react';
-import { PlayerType, CardType, CurrentRoundType } from '../types/game';
+import { PlayerInfoType, PlayerType, CardType, CurrentRoundType } from '../types/game';
 import { blackCards, whiteCards } from '../utils/cardDecks';
-
-export interface PlayerType {
-  id: string;
-  name: string;
-  avatar: string;
-  isHost: boolean;
-  score: number;
-  isReady: boolean;
-}
+import { socket } from '../socket'; // ✅ added socket
 
 interface GameContextType {
   playerInfo: PlayerInfoType;
@@ -60,10 +52,22 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         isHost: playerInfo.isHost,
         score: 0,
         isReady: true,
+        isBot: false
       };
       setPlayers(prev => [...prev, newPlayer]);
     }
   }, [playerInfo, players]);
+
+  // ✅ Listen for updates to submissions via socket
+  useEffect(() => {
+    socket.on('update-submissions', (newSubmissions: CurrentRoundType['submissions']) => {
+      setCurrentRound(prev => ({ ...prev, submissions: newSubmissions }));
+    });
+
+    return () => {
+      socket.off('update-submissions');
+    };
+  }, []);
 
   const initializeGame = (gameCode: string) => {
     const cardCzarId = players[0]?.id || '';
@@ -122,6 +126,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setCurrentRound(prev => ({ ...prev, submissions: newSubmissions }));
+    socket.emit('update-submissions', newSubmissions); // ✅ emit submission update
 
     if (newSubmissions.length === players.length - 1) {
       setGameState('judging');

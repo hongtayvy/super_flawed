@@ -1,3 +1,4 @@
+// app/src/components/game/GameChat.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { useGame } from '../../contexts/GameContext';
@@ -26,51 +27,30 @@ const GameChat = ({ gameId }: GameChatProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // System welcome message
+  // Listen for incoming chat messages via socket
   useEffect(() => {
-    if (messages.length === 0) {
-      addSystemMessage(`Welcome to game ${gameId}! Good luck and have fun!`);
-    }
-  }, [gameId, messages.length]);
-
-  // Receive chat messages from server
-  useEffect(() => {
-    const onChatMessage = ({ message }: { message: ChatMessage }) => {
-      setMessages(prev => [...prev, message]);
+    const handleIncoming = (msg: ChatMessage) => {
+      setMessages(prev => [...prev, msg]);
     };
 
-    socket.on('chat-message', onChatMessage);
-
+    socket.on('chat-message', handleIncoming);
     return () => {
-      socket.off('chat-message', onChatMessage);
+      socket.off('chat-message', handleIncoming);
     };
   }, []);
-
-  const addSystemMessage = (text: string) => {
-    setMessages(prev => [
-      ...prev,
-      {
-        id: `sys-${Date.now()}`,
-        playerId: 'system',
-        playerName: 'System',
-        text,
-        timestamp: Date.now()
-      }
-    ]);
-  };
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() && playerInfo.name) {
       const message: ChatMessage = {
-        id: `msg-${Date.now()}-${Math.random()}`,
+        id: `msg-${Date.now()}`,
         playerId: playerInfo.id,
         playerName: playerInfo.name,
         text: newMessage.trim(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
-      socket.emit('chat-message', { gameId, message });
+      socket.emit('chat-message', { gameCode: gameId, message });
       setNewMessage('');
     }
   };
@@ -85,13 +65,13 @@ const GameChat = ({ gameId }: GameChatProps) => {
         <div className="space-y-3">
           {messages.map(message => (
             <div key={message.id} className={`flex ${message.playerId === playerInfo.id ? 'justify-end' : ''}`}>
-              <div 
+              <div
                 className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                  message.playerId === 'system' 
-                    ? 'bg-gray-700 text-gray-300 italic' 
+                  message.playerId === 'system'
+                    ? 'bg-gray-700 text-gray-300 italic'
                     : message.playerId === playerInfo.id
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-700 text-white'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-700 text-white'
                 }`}
               >
                 {message.playerId !== 'system' && message.playerId !== playerInfo.id && (

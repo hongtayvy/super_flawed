@@ -102,6 +102,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     });
 
   socket.on('start-round', (data) => {
+
+    console.log('[start-round] Received:', data); 
+
     const { round, hands, scores } = data || {};
 
     if (!round || !hands || !scores) {

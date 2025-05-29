@@ -42,3 +42,17 @@ export interface PlayerInfoType {
   avatar: string;
   isHost: boolean;
 }
+
+export interface GameChatProps {
+  gameId: string;
+  messages: ChatMessage[];
+  onSendMessage: (text: string) => void;
+}
+
+export interface ChatMessage {
+  id: string;
+  playerId: string;
+  playerName: string;
+  text: string;
+  timestamp: number;
+}

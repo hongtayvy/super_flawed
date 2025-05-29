@@ -1,24 +1,10 @@
-// app/src/components/game/GameChat.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { useGame } from '../../contexts/GameContext';
-import { socket } from '../../socket';
+import type { GameChatProps } from '../../types/game';
 
-interface GameChatProps {
-  gameId: string;
-}
-
-interface ChatMessage {
-  id: string;
-  playerId: string;
-  playerName: string;
-  text: string;
-  timestamp: number;
-}
-
-const GameChat = ({ gameId }: GameChatProps) => {
+const GameChat = ({ messages, onSendMessage }: GameChatProps) => {
   const { playerInfo } = useGame();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -27,30 +13,11 @@ const GameChat = ({ gameId }: GameChatProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Listen for incoming chat messages via socket
-  useEffect(() => {
-    const handleIncoming = (msg: ChatMessage) => {
-      setMessages(prev => [...prev, msg]);
-    };
-
-    socket.on('chat-message', handleIncoming);
-    return () => {
-      socket.off('chat-message', handleIncoming);
-    };
-  }, []);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() && playerInfo.name) {
-      const message: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        playerId: playerInfo.id,
-        playerName: playerInfo.name,
-        text: newMessage.trim(),
-        timestamp: Date.now(),
-      };
-
-      socket.emit('chat-message', { gameCode: gameId, message });
+      onSendMessage(newMessage.trim());
       setNewMessage('');
     }
   };

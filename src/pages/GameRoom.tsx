@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import type { ChatMessage } from '../types/game';
+import crypto from 'crypto';
 import { useNavigate, useParams } from 'react-router-dom';
 import GameBoard from '../components/game/GameBoard';
 import PlayerHand from '../components/game/PlayerHand';
@@ -23,6 +25,30 @@ const GameRoom = () => {
     selectWinner,
     resetGame,
   } = useGame();
+
+  // Chat state & handlers
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+
+  useEffect(() => {
+    socket.on('chat-message', (message: ChatMessage) => {
+      setChatMessages(prev => [...prev, message]);
+    });
+    return () => {
+      socket.off('chat-message');
+    };
+  }, []);
+
+  // Join lobby for game events and chat
+  useEffect(() => {
+    if (gameId && playerInfo.name) {
+      socket.emit('join-lobby', { gameCode: gameId, player: playerInfo });
+    }
+    return () => {
+      if (gameId) {
+        socket.emit('leave-lobby', { gameCode: gameId, playerId: playerInfo.id });
+      }
+    };
+  }, [gameId, playerInfo]);
 
   const [showScoreboard, setShowScoreboard] = useState(false);
 
@@ -106,7 +132,14 @@ const GameRoom = () => {
               isCardCzar={currentRound.isCardCzar}
               gameState={gameState}
               onSelectCard={selectCard}
-              onSubmitCard={() => submitSelection(playerInfo.id, currentRound.selectedCardIndex)}
+              onSubmitCard={() => {
+                const idx = currentRound.selectedCardIndex;
+                if (idx === null) return;
+                const card = currentRound.hand[idx];
+                const submission = { playerId: playerInfo.id, playerName: playerInfo.name, card };
+                socket.emit('submit-card', { gameCode: gameId || '', submission });
+                submitSelection(playerInfo.id, idx);
+              }}
             />
           </div>
         </div>
@@ -119,7 +152,21 @@ const GameRoom = () => {
             onClose={() => setShowScoreboard(false)}
           />
 
-          <GameChat gameId={gameId || ''} />
+          <GameChat
+            gameId={gameId || ''}
+            messages={chatMessages}
+            onSendMessage={(text: string) => {
+              const msg: ChatMessage = {
+                id: crypto.randomUUID(),
+                playerId: playerInfo.id,
+                playerName: playerInfo.name,
+                text,
+                timestamp: Date.now(),
+              };
+              socket.emit('chat-message', { gameCode: gameId, message: msg });
+              setChatMessages(prev => [...prev, msg]);
+            }}
+          />
 
           <div className="p-4">
             <button

@@ -7,8 +7,8 @@ const URL = import.meta.env.PROD
   : 'http://localhost:4000';
 
 export const socket = io(URL, {
-  transports: ['websocket'],  // WS only
-  path: '/socket.io',         // match your server
+  // no transports override → will use polling first, then WS if it ever works
+  path: '/socket.io',
 });
 
 // add these so you can see exactly what’s happening

@@ -208,7 +208,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setCurrentRound((prev) => ({ ...prev, submissions: newSubmissions }));
-    socket.emit('update-submissions', newSubmissions);
+    socket.emit('submit-card', { gameCode, submission: newSubmission });
 
     if (newSubmissions.length === players.length - 1) {
       setGameState('judging');

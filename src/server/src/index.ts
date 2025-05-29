@@ -6,16 +6,18 @@ import cors from 'cors';
 const app = express();
 const httpServer = createServer(app);
 
+const allowedOrigins = ['https://teal-beignet-5557d3.netlify.app'];
+
 app.use(
   cors({
-    origin: ['https://teal-beignet-5557d3.netlify.app'], // Your real frontend domain
-    credentials: true, // Allow cookies/headers if needed
+    origin: allowedOrigins,
+    credentials: true,
   })
 );
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ['https://teal-beignet-5557d3.netlify.app'],
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true,
   },

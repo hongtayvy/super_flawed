@@ -17,6 +17,8 @@ const PlayerSetup = ({ onSubmit, buttonText }: PlayerSetupProps) => {
     }
   };
 
+  console.log('[PlayerSetup] Submitting:', name, selectedAvatar);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>

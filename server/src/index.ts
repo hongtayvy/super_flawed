@@ -57,32 +57,26 @@ const games: Record<string, GameState> = {};
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
-  socket.on('join-room', ({ gameCode, player }) => {
-    console.log('Player', player.name, 'joined room', gameCode); // ✅ Add logging here
-
-    const code = gameCode.toLowerCase();
+socket.on('join-room', ({ gameCode, player }, callback) => {
+  const code = gameCode.toLowerCase();
     if (!games[code]) {
       games[code] = {
         players: [], submissions: [], chat: [], scores: {}, hands: {}
       };
     }
 
-    console.log('[Server] Current players in room', code, games[code].players.map(p => p.name));
-
     const existing = games[code].players.find(p => p.id === player.id);
-    if (!existing) {
-      // ✅ Defensive check: ensure required fields exist
-      if (!player.id || !player.name) {
-        console.warn('❌ Invalid player tried to join:', player);
-        return;
-      }
-
+    if (!existing && player?.id && player?.name) {
       games[code].players.push(player);
       games[code].scores[player.id] = 0;
+      console.log('Player', player.name, 'joined room', gameCode);
+      console.log('[Server] Current players in room', code, games[code].players.map(p => p.name));
     }
 
     socket.join(code);
     io.to(code).emit('lobby-players', games[code].players);
+
+    if (callback) callback(); // ✅ Acknowledge emit
   });
 
   socket.on('player-ready', ({ gameCode, playerId, isReady }) => {

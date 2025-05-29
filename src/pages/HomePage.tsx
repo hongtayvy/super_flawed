@@ -28,15 +28,15 @@ const HomePage = () => {
       isBot: false,
     };
 
-    console.log('[CreateGame] Setting playerInfo and emitting join-room for', player.name, newGameCode);
-
     setPlayerInfo(player);
-    socket.emit('join-room', { gameCode: newGameCode, player });
-    setIsCreateModalOpen(false);
+    console.log('[HomePage] Emitting join-room for host:', player.name, newGameCode);
 
-    setTimeout(() => {
-      navigate(`/lobby?code=${newGameCode}`); // ✅ fixed
-    }, 100);
+    // Add acknowledgment-based navigation
+    socket.emit('join-room', { gameCode: newGameCode, player }, () => {
+      console.log('[HomePage] Host joined room, navigating to lobby');
+      setIsCreateModalOpen(false);
+      navigate(`/lobby?code=${newGameCode}`);
+    });
   };
 
   const handleJoinGame = (playerName: string, playerAvatar: string) => {

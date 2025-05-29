@@ -15,6 +15,7 @@ const HomePage = () => {
   const [gameCode, setGameCode] = useState('');
 
   const handleCreateGame = (playerName: string, playerAvatar: string) => {
+    console.log('[handleCreateGame] Called with:', playerName, playerAvatar);
     const id = crypto.randomUUID();
     const newGameCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 

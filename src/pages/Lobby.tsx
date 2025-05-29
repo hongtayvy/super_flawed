@@ -34,7 +34,7 @@ const Lobby: React.FC = () => {
   // auto-join once we have a code + playerInfo
   useEffect(() => {
     if (!alreadyJoined.current && playerInfo.id && gameCode) {
-      socket.emit('join-lobby', {
+      socket.emit('join-room', {
         gameCode,
         player: {
           id: playerInfo.id,

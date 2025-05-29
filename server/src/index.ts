@@ -1,35 +1,30 @@
+// 📁 server/index.ts
+// Add player joins & session-persistent game state
+
+import session from 'express-session';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import crypto from 'crypto';
 
 const app = express();
 const httpServer = createServer(app);
 
 const allowedOrigins = ['https://teal-beignet-5557d3.netlify.app'];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
-app.options('*', cors({
-  origin: allowedOrigins,
-  credentials: true,
+// ✅ Add session middleware
+app.use(session({
+  secret: 'superflawed-secret',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // ⚠️ for production, set secure: true over HTTPS
 }));
-
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
-  res.header('Access-Control-Allow-Credentials', 'true');
-  next();
-});
 
 const io = new Server(httpServer, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'], credentials: true }
 });
 
 interface PlayerType {
@@ -45,7 +40,6 @@ interface PlayerType {
 interface CardType {
   id: string;
   text: string;
-  [key: string]: any;
 }
 
 interface CardSubmission {
@@ -53,81 +47,44 @@ interface CardSubmission {
   card: CardType;
 }
 
-interface ChatMessage {
-  id: string;
-  playerId: string;
-  playerName: string;
-  text: string;
-  timestamp: number;
+interface GameState {
+  players: PlayerType[];
+  submissions: CardSubmission[];
+  chat: any[];
+  scores: Record<string, number>;
+  hands: Record<string, CardType[]>;
 }
 
-const lobbyPlayers: Record<string, PlayerType[]> = {};
+const games: Record<string, GameState> = {};
 
-const games: Record<string, {
-  submissions: CardSubmission[];
-  chat: ChatMessage[];
-}> = {};
+// ✅ Player joins with session support
+io.on('connection', (socket) => {
+  console.log('🔌 User connected:', socket.id);
 
-const MAX_PLAYERS = 16;
-
-io.on('connection', socket => {
-  console.log('✅ A user connected:', socket.id);
-
-  socket.on('join-lobby', ({ gameCode, player }: { gameCode: string; player: PlayerType }) => {
+  socket.on('join-room', ({ gameCode, player }: { gameCode: string; player: PlayerType }) => {
     const code = gameCode.toLowerCase();
-    const room = io.sockets.adapter.rooms.get(code);
-    const numClients = room ? room.size : 0;
-
-    if (numClients === 0) {
-      lobbyPlayers[code] = [player];
-      socket.join(code);
-      socket.emit('lobby-players', lobbyPlayers[code]);
-    } else if (numClients < MAX_PLAYERS) {
-      if (!lobbyPlayers[code].some(p => p.id === player.id)) {
-        lobbyPlayers[code].push(player);
-      }
-      socket.join(code);
-      io.to(code).emit('lobby-players', lobbyPlayers[code]);
-    } else {
-      socket.emit('lobby-error', { message: 'Lobby is full.' });
+    if (!games[code]) {
+      games[code] = {
+        players: [], submissions: [], chat: [], scores: {}, hands: {}
+      };
     }
+
+    const existing = games[code].players.find(p => p.id === player.id);
+    if (!existing) {
+      games[code].players.push(player);
+      games[code].scores[player.id] = 0;
+    }
+
+    socket.join(code);
+    io.to(code).emit('lobby-players', games[code].players);
   });
 
-  socket.on('toggle-bots', ({ gameCode }: { gameCode: string }) => {
+  socket.on('submit-card', ({ gameCode, submission }) => {
     const code = gameCode.toLowerCase();
-    const bots: PlayerType[] = [
-      { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false, isBot: true },
-      { id: 'rengo', name: 'Rengo Yang', avatar: '4', isHost: false, score: 0, isReady: false, isBot: true },
-      { id: 'yeng', name: 'Yeng Chang', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
-      { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
-    ];
-    const lobby = lobbyPlayers[code] || [];
-    const hasBots = lobby.some(p => bots.map(b => b.id).includes(p.id));
-    lobbyPlayers[code] = hasBots
-      ? lobby.filter(p => !bots.map(b => b.id).includes(p.id))
-      : [...lobby, ...bots];
-    io.to(code).emit('lobby-players', lobbyPlayers[code]);
-  });
+    const existing = games[code].submissions.findIndex(s => s.playerId === submission.playerId);
 
-  socket.on('player-ready', ({ gameCode, playerId, isReady }: { gameCode: string; playerId: string; isReady: boolean }) => {
-    const code = gameCode.toLowerCase();
-    lobbyPlayers[code] = (lobbyPlayers[code] || []).map(p =>
-      p.id === playerId ? { ...p, isReady } : p
-    );
-    io.to(code).emit('lobby-players', lobbyPlayers[code]);
-  });
-
-  socket.on('start-game', ({ gameCode }: { gameCode: string }) => {
-    io.to(gameCode.toLowerCase()).emit('game-started', { gameCode });
-  });
-
-  socket.on('submit-card', ({ gameCode, submission }: { gameCode: string; submission: CardSubmission }) => {
-    const code = gameCode.toLowerCase();
-    if (!games[code]) games[code] = { submissions: [], chat: [] };
-
-    const existingIndex = games[code].submissions.findIndex(s => s.playerId === submission.playerId);
-    if (existingIndex !== -1) {
-      games[code].submissions[existingIndex] = submission;
+    if (existing !== -1) {
+      games[code].submissions[existing] = submission;
     } else {
       games[code].submissions.push(submission);
     }
@@ -135,45 +92,31 @@ io.on('connection', socket => {
     io.to(code).emit('update-submissions', games[code].submissions);
   });
 
-  socket.on('start-round', ({ gameCode, roundNumber, cardCzarId, blackCard, hands, scores }) => {
+  socket.on('start-round', ({ gameCode, round, hands, scores }) => {
     const code = gameCode.toLowerCase();
+    if (!games[code]) return;
 
-    io.to(code).emit('start-round', {
-      roundNumber,
-      cardCzarId,
-      blackCard,
-      hands,
-      scores,
-    });
+    games[code].hands = hands;
+    games[code].scores = scores;
+    games[code].submissions = []; // reset
+
+    io.to(code).emit('start-round', { round, hands, scores });
   });
 
-  socket.on('chat-message', ({ gameCode, message }: { gameCode: string; message: ChatMessage }) => {
+  socket.on('update-winner', ({ gameCode, winner }) => {
     const code = gameCode.toLowerCase();
-    if (!games[code]) games[code] = { submissions: [], chat: [] };
+    if (!games[code]) return;
 
-    games[code].chat.push(message);
-    io.to(code).emit('chat-message', message);
-  });
-
-  socket.on('leave-lobby', ({ gameCode, playerId }: { gameCode: string; playerId: string }) => {
-    const code = gameCode.toLowerCase();
-    lobbyPlayers[code] = (lobbyPlayers[code] || []).filter(p => p.id !== playerId);
-    socket.leave(code);
-    io.to(code).emit('lobby-players', lobbyPlayers[code]);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('❌ User disconnected:', socket.id);
+    games[code].scores[winner.playerId] = (games[code].scores[winner.playerId] || 0) + 1;
+    io.to(code).emit('update-winner', winner);
   });
 });
 
-// ✅ Keepalive/test route
 app.get('/', (_, res) => {
-  res.send('Super Flawed backend is running 🚀');
+  res.send('🟢 Super Flawed backend active');
 });
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
-
 httpServer.listen(PORT, () => {
-  console.log(`✅ Socket server listening on port ${PORT}`);
+  console.log(`✅ Listening on port ${PORT}`);
 });

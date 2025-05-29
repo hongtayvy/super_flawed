@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import PlayerSetup from '../components/game/PlayerSetup';
 import { useGame } from '../contexts/GameContext';
+import { socket } from '../socket'; // ✅ import the socket
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -15,15 +16,39 @@ const HomePage = () => {
 
   const handleCreateGame = (playerName: string, playerAvatar: string) => {
     const id = crypto.randomUUID();
-    setPlayerInfo({ id, name: playerName, avatar: playerAvatar, isHost: true });
     const newGameCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const player = {
+      id,
+      name: playerName,
+      avatar: playerAvatar,
+      isHost: true,
+      score: 0,
+      isReady: true,
+      isBot: false,
+    };
+
+    setPlayerInfo(player);
+    socket.emit('join-room', { gameCode: newGameCode, player }); // ✅ join socket room
     setIsCreateModalOpen(false);
     navigate(`/lobby?code=${newGameCode}`);
   };
 
   const handleJoinGame = (playerName: string, playerAvatar: string) => {
     const id = crypto.randomUUID();
-    setPlayerInfo({ id, name: playerName, avatar: playerAvatar, isHost: false });
+
+    const player = {
+      id,
+      name: playerName,
+      avatar: playerAvatar,
+      isHost: false,
+      score: 0,
+      isReady: true,
+      isBot: false,
+    };
+
+    setPlayerInfo(player);
+    socket.emit('join-room', { gameCode, player }); // ✅ join socket room
     setIsJoinModalOpen(false);
     navigate(`/lobby?code=${gameCode}`);
   };

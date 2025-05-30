@@ -9,7 +9,6 @@ import GameChat from '../components/game/GameChat';
 import RoundInfo from '../components/game/RoundInfo';
 import { useGame } from '../contexts/GameContext';
 import { socket } from '../socket';
-import { sub } from 'framer-motion/client';
 
 const GameRoom = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -42,12 +41,11 @@ const GameRoom = () => {
 
   const [showScoreboard, setShowScoreboard] = useState(false);
 
-  // ✅ Join the actual game lobby instead of an untracked "room"
+  // Join room for game events and chat
   useEffect(() => {
     if (gameId && playerInfo.name) {
       socket.emit('join-room', { gameCode: gameId, player: playerInfo });
     }
-
     return () => {
       if (gameId) {
         socket.emit('leave-room', { gameCode: gameId, playerId: playerInfo.id });

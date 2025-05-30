@@ -98,7 +98,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     socket.emit('join-room', { gameCode, player: playerInfo });
 
     const handleSubmissions = (newSubs: CurrentRoundType['submissions']) => {
-      setCurrentRound(prev => ({ ...prev, submissions: newSubs }));
+      setCurrentRound(prev => {
+        const updated = { ...prev, submissions: newSubs };
+        // if this client is the card czar and everyone else has submitted, move to judging
+        if (updated.isCardCzar && newSubs.length === players.length - 1) {
+          setGameState('judging');
+        }
+        return updated;
+      });
     };
     const handleWinner = (winner: WinnerType) => {
       setCurrentRound(prev => ({ ...prev, winner }));
@@ -141,7 +148,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       socket.off('start-round', handleStartRound);
       socket.emit('leave-room', { gameCode, playerId: playerInfo.id });
     };
-  }, [gameCode, playerInfo.id]);
+  }, [gameCode, playerInfo.id, players]);
 
   const initializeGame = (code: string) => {
     setGameCode(code);

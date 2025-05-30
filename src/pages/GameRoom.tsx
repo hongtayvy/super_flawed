@@ -39,17 +39,6 @@ const GameRoom = () => {
     };
   }, []);
 
-  // Join lobby for game events and chat
-  useEffect(() => {
-    if (gameId && playerInfo.name) {
-      socket.emit('join-room', { gameCode: gameId, player: playerInfo });
-    }
-    return () => {
-      if (gameId) {
-        socket.emit('leave-room', { gameCode: gameId, playerId: playerInfo.id });
-      }
-    };
-  }, [gameId, playerInfo]);
 
   const [showScoreboard, setShowScoreboard] = useState(false);
 

@@ -56,7 +56,14 @@ const games: Record<string, GameState> = {};
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
+  socket.on('join-lobby', (payload, callback) => {
+    console.log('[Server] Received join-lobby:', payload);
+    // forward to join-room logic
+    socket.emit('join-room', payload, callback);
+  });
+
 socket.on('join-room', ({ gameCode, player }, callback) => {
+  console.log('[Server] join-room payload:', gameCode, player);
   const code = gameCode.toLowerCase();
     if (!games[code]) {
       games[code] = {

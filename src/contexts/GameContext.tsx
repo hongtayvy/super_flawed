@@ -6,6 +6,7 @@ import {
   Dispatch,
   SetStateAction,
   useEffect,
+  useRef,
 } from 'react';
 import {
   PlayerInfoType,
@@ -58,6 +59,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const [players, setPlayers] = useState<PlayerType[]>([]);
+  const playersRef = useRef<PlayerType[]>(players);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
   const [gameCode, setGameCode] = useState('');
   const [gameState, setGameState] = useState<string>('idle');
 
@@ -101,7 +107,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setCurrentRound(prev => {
         const updated = { ...prev, submissions: newSubs };
         // if this client is the card czar and everyone else has submitted, move to judging
-        if (updated.isCardCzar && newSubs.length === players.length - 1) {
+        if (updated.isCardCzar && newSubs.length === playersRef.current.length - 1) {
           setGameState('judging');
         }
         return updated;
@@ -148,7 +154,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       socket.off('start-round', handleStartRound);
       socket.emit('leave-room', { gameCode, playerId: playerInfo.id });
     };
-  }, [gameCode, playerInfo.id, players]);
+  }, [gameCode, playerInfo.id]);
 
   const initializeGame = (code: string) => {
     setGameCode(code);

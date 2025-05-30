@@ -92,54 +92,56 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [playerInfo, players]);
 
   useEffect(() => {
-    socket.on('update-submissions', (newSubmissions: CurrentRoundType['submissions']) => {
-      setCurrentRound((prev) => ({ ...prev, submissions: newSubmissions }));
-    });
+    if (!gameCode || !playerInfo.id) return;
 
-    socket.on('update-winner', (winner: WinnerType) => {
-      setCurrentRound((prev) => ({ ...prev, winner }));
+    // join this game room
+    socket.emit('join-room', { gameCode, player: playerInfo });
+
+    const handleSubmissions = (newSubs: CurrentRoundType['submissions']) => {
+      setCurrentRound(prev => ({ ...prev, submissions: newSubs }));
+    };
+    const handleWinner = (winner: WinnerType) => {
+      setCurrentRound(prev => ({ ...prev, winner }));
       setGameState('roundEnd');
-    });
-
-  socket.on('start-round', (data) => {
-
-    console.log('[start-round] Received:', data); 
-
-    const { round, hands, scores } = data || {};
-
-    if (!round || !hands || !scores) {
-      console.error('❌ Invalid start-round payload:', data);
-      return;
-    }
-
-    const isCardCzar = round.cardCzarId === playerInfo.id;
-    const myHand = hands[playerInfo.id] || [];
-
-    setPlayers((prev) =>
-      prev.map((p) => ({
+    };
+    const handleStartRound = (data: {
+      round: Omit<CurrentRoundType, 'hand' | 'isCardCzar' | 'selectedCardIndex' | 'submissions' | 'winner'>;
+      hands: Record<string, CardType[]>;
+      scores: Record<string, number>;
+    }) => {
+      const { round, hands, scores } = data;
+      if (!round || !hands || !scores) {
+        console.error('Invalid start-round payload', data);
+        return;
+      }
+      // update scores
+      setPlayers(prev => prev.map(p => ({
         ...p,
         score: scores[p.id] ?? p.score,
-      }))
-    );
+      })));
+      // set up new round for this player
+      setCurrentRound({
+        ...round,
+        isCardCzar: round.cardCzarId === playerInfo.id,
+        hand: hands[playerInfo.id] || [],
+        selectedCardIndex: null,
+        submissions: [],
+        winner: null,
+      });
+      setGameState('selecting');
+    };
 
-    setCurrentRound({
-      ...round,
-      isCardCzar,
-      hand: myHand,
-      selectedCardIndex: null,
-      submissions: [],
-      winner: null,
-    });
-
-    setGameState('selecting');
-  });
+    socket.on('update-submissions', handleSubmissions);
+    socket.on('update-winner', handleWinner);
+    socket.on('start-round', handleStartRound);
 
     return () => {
-      socket.off('update-submissions');
-      socket.off('update-winner');
-      socket.off('start-round');
+      socket.off('update-submissions', handleSubmissions);
+      socket.off('update-winner', handleWinner);
+      socket.off('start-round', handleStartRound);
+      socket.emit('leave-room', { gameCode, playerId: playerInfo.id });
     };
-  }, [playerInfo.id]);
+  }, [gameCode, playerInfo.id]);
 
   const initializeGame = (code: string) => {
     setGameCode(code);

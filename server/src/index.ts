@@ -157,6 +157,12 @@ socket.on('join-room', ({ gameCode, player }, callback) => {
     games[code].chat.push(message);
     io.to(code).emit('chat-message', message);
   });
+
+  socket.on('leave-room', ({ gameCode, playerId }) => {
+    const code = gameCode.toLowerCase();
+    socket.leave(code);
+    // …optionally remove from games[code].players and re-emit…
+  });
 });
 
 app.get('/', (_, res) => {

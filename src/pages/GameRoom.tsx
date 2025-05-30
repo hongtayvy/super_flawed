@@ -9,6 +9,7 @@ import GameChat from '../components/game/GameChat';
 import RoundInfo from '../components/game/RoundInfo';
 import { useGame } from '../contexts/GameContext';
 import { socket } from '../socket';
+import { sub } from 'framer-motion/client';
 
 const GameRoom = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -45,7 +46,7 @@ const GameRoom = () => {
     }
     return () => {
       if (gameId) {
-        socket.emit('leave-lobby', { gameCode: gameId, playerId: playerInfo.id });
+        socket.emit('leave-room', { gameCode: gameId, playerId: playerInfo.id });
       }
     };
   }, [gameId, playerInfo]);
@@ -55,12 +56,12 @@ const GameRoom = () => {
   // ✅ Join the actual game lobby instead of an untracked "room"
   useEffect(() => {
     if (gameId && playerInfo.name) {
-      socket.emit('join-lobby', { gameCode: gameId, player: playerInfo });
+      socket.emit('join-room', { gameCode: gameId, player: playerInfo });
     }
 
     return () => {
       if (gameId) {
-        socket.emit('leave-lobby', { gameCode: gameId, playerId: playerInfo.id });
+        socket.emit('leave-room', { gameCode: gameId, playerId: playerInfo.id });
       }
     };
   }, [gameId, playerInfo]);
@@ -137,6 +138,7 @@ const GameRoom = () => {
                 if (idx === null) return;
                 const card = currentRound.hand[idx];
                 const submission = { playerId: playerInfo.id, playerName: playerInfo.name, card };
+                console.log("submission is: " + submission);
                 socket.emit('submit-card', { gameCode: gameId || '', submission });
                 submitSelection(playerInfo.id, idx);
               }}

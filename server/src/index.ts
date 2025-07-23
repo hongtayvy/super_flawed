@@ -8,7 +8,11 @@ import cors from 'cors';
 const app = express();
 const httpServer = createServer(app);
 
-const allowedOrigins = ['https://teal-beignet-5557d3.netlify.app'];
+const allowedOrigins = [
+  "https://superflawed.netlify.app", // your production frontend
+  "https://6880424d6dd5960008c088c6--superflawed.netlify.app", // Netlify preview
+  "http://localhost:5173", // dev
+];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 

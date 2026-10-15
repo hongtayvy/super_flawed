@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: super-flawed-server
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /socket.io/?EIO=4&transport=polling
+    envVars:
+      - key: NODE_VERSION
+        value: 20

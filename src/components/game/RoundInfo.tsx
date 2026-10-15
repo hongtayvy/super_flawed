@@ -10,7 +10,7 @@ interface RoundInfoProps {
 const RoundInfo = ({ round, cardCzar, gameState, onShowScoreboard }: RoundInfoProps) => {
   const getStateLabel = () => {
     switch (gameState) {
-      case 'selecting': return 'Card Selection';
+      case 'selecting': return 'Writing phase';
       case 'judging': return 'Judging';
       case 'roundEnd': return 'Round Complete';
       default: return 'Loading...';
@@ -18,29 +18,29 @@ const RoundInfo = ({ round, cardCzar, gameState, onShowScoreboard }: RoundInfoPr
   };
 
   return (
-    <div className="bg-gray-800 p-3 rounded-lg mb-3 flex flex-wrap justify-between items-center">
+    <div className="bg-white border-[3px] border-ink shadow-pop-sm p-3 rounded-2xl mb-3 flex flex-wrap justify-between items-center">
       <div className="flex items-center space-x-6">
         <div>
-          <span className="text-gray-400 text-sm">Round</span>
-          <div className="text-xl font-bold">{round}</div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted">Round</span>
+          <div className="display text-2xl">{round}</div>
         </div>
         
         <div>
-          <span className="text-gray-400 text-sm">Card Czar</span>
-          <div className="text-xl font-bold">{cardCzar}</div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted">Judge</span>
+          <div className="display text-2xl">{cardCzar}</div>
         </div>
         
         <div>
-          <span className="text-gray-400 text-sm">Phase</span>
-          <div className="text-xl font-bold">{getStateLabel()}</div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted">Phase</span>
+          <div className="display text-2xl">{getStateLabel()}</div>
         </div>
       </div>
       
       <button
         onClick={onShowScoreboard}
-        className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-sun border-2 border-ink rounded-full shadow-pop-sm text-xs font-black uppercase hover:-translate-y-0.5 transition-transform"
       >
-        <Trophy size={18} className="text-yellow-400" />
+        <Trophy size={18} className="text-ink" />
         <span>Scoreboard</span>
       </button>
     </div>

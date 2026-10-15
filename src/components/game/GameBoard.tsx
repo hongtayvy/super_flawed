@@ -13,11 +13,11 @@ const GameBoard = () => {
         return (
           <div className="flex flex-col items-center">
             <BlackCard text={blackCard.text} />
-            <div className="mt-8 text-center text-gray-300">
+            <div className="mt-8 text-center font-black">
               {isCardCzar ? (
-                <p className="text-xl">You are the Card Czar this round! Wait for others to submit their cards.</p>
+                <p className="text-2xl">You're the judge this round! Wait for the flaws to roll in.</p>
               ) : (
-                <p className="text-xl">Select a white card from your hand to submit.</p>
+                <p className="text-xl">Pick the flaw from your hand that ruins this power best.</p>
               )}
             </div>
           </div>
@@ -29,9 +29,9 @@ const GameBoard = () => {
             <BlackCard text={blackCard.text} />
             <div className="mt-8">
               {isCardCzar ? (
-                <p className="text-xl text-center mb-6">Select your favorite card!</p>
+                <p className="text-2xl font-black text-center mb-6">Which flaw ruins it best?</p>
               ) : (
-                <p className="text-xl text-center mb-6">The Card Czar is selecting the winner...</p>
+                <p className="text-2xl font-black text-center mb-6">The judge is deciding who ruined it best...</p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <AnimatePresence>
@@ -65,14 +65,14 @@ const GameBoard = () => {
           <div className="flex flex-col items-center">
             <BlackCard text={blackCard.text} />
             <div className="mt-8 text-center">
-              <h3 className="text-2xl font-bold mb-4">Round Winner: {winningPlayer}!</h3>
+              <h3 className="display text-4xl mb-4">Power ruined by {winningPlayer}!</h3>
               <div className="inline-block mb-4">
                 <WhiteCard 
                   text={winningCard}
                   isWinner={true}
                 />
               </div>
-              <p className="text-xl text-gray-300">Next round starting soon...</p>
+              <p className="text-lg font-black text-muted">Next superpower incoming...</p>
             </div>
           </div>
         );

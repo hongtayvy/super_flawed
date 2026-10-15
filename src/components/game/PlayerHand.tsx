@@ -22,9 +22,9 @@ const PlayerHand = ({
 }: PlayerHandProps) => {
   if (isCardCzar) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-4 bg-gray-800 rounded-lg">
-        <p className="text-xl text-center text-gray-300">
-          You are the Card Czar this round!
+      <div className="h-full flex flex-col items-center justify-center p-4 bg-lilac border-[3px] border-ink rounded-3xl">
+        <p className="display text-3xl text-center">
+          You're the judge this round!
         </p>
       </div>
     );
@@ -34,16 +34,16 @@ const PlayerHand = ({
   const canSubmit = selectedCardIndex !== null && isSelectingPhase;
 
   return (
-    <div className="h-full flex flex-col p-4 bg-gray-800 rounded-lg">
+    <div className="h-full flex flex-col p-4 bg-white border-[3px] border-ink rounded-3xl">
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-medium">Your Hand</h3>
+        <h3 className="display text-2xl">Your flaws</h3>
         {isSelectingPhase && (
           <Button
             onClick={onSubmitCard}
             disabled={!canSubmit}
-            className={`px-4 py-1 text-sm ${canSubmit ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-700 cursor-not-allowed'}`}
+            size="sm"
           >
-            Submit Card
+            Submit flaw ⚡
           </Button>
         )}
       </div>

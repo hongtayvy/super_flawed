@@ -1,3 +1,45 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-ice text-ink font-body;
+    margin: 0;
+  }
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  a:focus-visible {
+    outline: 4px solid #FF7369;
+    outline-offset: 4px;
+  }
+}
+
+@layer components {
+  .display {
+    @apply font-display uppercase font-black;
+    line-height: 0.94;
+    letter-spacing: 0.005em;
+  }
+  .panel {
+    @apply bg-white border-[3px] border-ink rounded-3xl shadow-pop p-6;
+  }
+  .pill {
+    @apply inline-flex items-center gap-2 px-4 py-2 border-2 border-ink rounded-full bg-white text-xs font-black uppercase tracking-widest;
+    box-shadow: 3px 3px 0 #17183E;
+  }
+  .field {
+    @apply w-full border-[3px] border-ink rounded-xl bg-ice px-4 py-3 text-ink font-extrabold placeholder:text-[#8990AA];
+  }
+  .field:focus {
+    @apply bg-white border-cobalt outline-none;
+    box-shadow: 0 0 0 4px #3153F52B;
+  }
+  .field-label {
+    @apply block text-xs font-black uppercase tracking-widest mb-2;
+  }
+}

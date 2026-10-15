@@ -59,58 +59,121 @@ const HomePage = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] p-4">
-      <div className="max-w-md w-full mx-auto text-center space-y-8">
-        <div className="mb-12 space-y-4">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-indigo-600 bg-clip-text text-transparent">
-            Super Flawed
-          </h1>
-          <p className="text-gray-300 text-lg">
-            The party card game for horrible people, now online!
+    <div>
+      <section className="relative bg-[#F3F5FF] border-b-[3px] border-ink overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 grid md:grid-cols-[1.05fr_.95fr] items-center gap-6 min-h-[600px]">
+          <div className="py-12 relative z-10">
+            <span className="pill bg-sun">✳ A party game about very bad heroes</span>
+            <h1 className="display text-[clamp(60px,9vw,112px)] mt-5 mb-5 tracking-tight">
+              <span className="block text-cobalt">Great</span>
+              <span className="block text-cobalt">Powers.</span>
+              <span className="block text-coral">Terrible</span>
+              <span className="block text-coral">Friends.</span>
+            </h1>
+            <p className="text-2xl font-extrabold leading-snug max-w-lg tracking-tight mb-3">
+              What if every superpower came with a ridiculously bad catch?
+            </p>
+            <p className="text-muted font-bold leading-relaxed max-w-md mb-7">
+              Give your friends an amazing ability. They invent the worst possible flaw. One
+              judge picks the funniest disaster.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Button size="lg" onClick={() => setIsCreateModalOpen(true)}>
+                <PlusCircle className="h-5 w-5" />
+                Start a game
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => setIsJoinModalOpen(true)}>
+                <Users className="h-5 w-5" />
+                Join with code
+              </Button>
+            </div>
+            <p className="mt-8 text-xs font-extrabold uppercase tracking-wide text-muted">
+              Best with friends · Worst with powers
+            </p>
+          </div>
+
+          <div className="relative h-[460px] md:h-[600px]" aria-hidden="true">
+            <div className="absolute inset-x-4 top-10 bottom-8 rounded-full bg-sun border-4 border-ink -rotate-[11deg] shadow-[10px_12px_0_#B8B5FF]" />
+            <div className="absolute z-10 top-8 left-6 display text-2xl -rotate-[10deg] bg-white border-[3px] border-ink rounded-2xl px-5 py-2 shadow-pop-sm">
+              This is fine!
+            </div>
+            <img
+              src="/mascot/hero.webp"
+              alt=""
+              className="absolute z-[5] bottom-0 left-1/2 -translate-x-1/2 h-full max-h-[560px] object-contain drop-shadow-[7px_8px_0_rgba(23,24,62,0.14)]"
+            />
+            <div className="absolute z-10 right-2 top-24 w-44 -rotate-[8deg] bg-cobalt text-white border-[3px] border-ink rounded-2xl shadow-pop-lg p-4 hidden sm:block">
+              <span className="text-[10px] font-black uppercase tracking-[0.15em]">⚡ The superpower</span>
+              <p className="font-black text-lg leading-tight mt-2">You can teleport anywhere.</p>
+            </div>
+            <div className="absolute z-10 right-0 bottom-16 w-48 rotate-[6deg] bg-sun border-[3px] border-ink rounded-2xl shadow-pop-lg p-4 hidden sm:block">
+              <span className="text-[10px] font-black uppercase tracking-[0.15em]">✳ The flaw</span>
+              <p className="font-black text-lg leading-tight mt-2">
+                But your clothes arrive 10 minutes later.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-8 py-14">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+          <h2 className="display text-[clamp(40px,5vw,64px)]">How to ruin a hero.</h2>
+          <p className="max-w-xs text-sm font-bold text-muted">
+            One amazing superpower. Unlimited terrible ideas. A laugh-out-loud showdown every
+            round.
           </p>
         </div>
-
-        <div className="space-y-4">
-          <Button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800"
-          >
-            <PlusCircle className="mr-2 h-5 w-5" />
-            Create New Game
-          </Button>
-
-          <Button 
-            onClick={() => setIsJoinModalOpen(true)}
-            className="w-full py-4 bg-gray-800 hover:bg-gray-700"
-          >
-            <Users className="mr-2 h-5 w-5" />
-            Join Game
-          </Button>
+        <div className="grid md:grid-cols-3 gap-5">
+          {[
+            { n: '01', icon: '⚡', title: 'Get a power', body: 'Each round reveals a superpower card.', bg: 'bg-cobalt text-white' },
+            { n: '02', icon: '✎', title: 'Add a catch', body: 'Play the flaw card that makes the power wonderfully awful.', bg: 'bg-sun' },
+            { n: '03', icon: '★', title: 'Judge the chaos', body: 'One judge picks the funniest flaw. Winner gets the point.', bg: 'bg-lilac' },
+          ].map((step) => (
+            <article
+              key={step.n}
+              className={`${step.bg} relative border-[3px] border-ink rounded-3xl shadow-pop p-6 min-h-[220px]`}
+            >
+              <span className="display text-5xl opacity-40">{step.n}</span>
+              <span className="absolute top-5 right-6 text-4xl rotate-12">{step.icon}</span>
+              <h3 className="display text-3xl mt-5 mb-2">{step.title}</h3>
+              <p className="font-bold leading-snug max-w-[280px]">{step.body}</p>
+            </article>
+          ))}
         </div>
 
-        <p className="mt-8 text-gray-400 text-sm">
-          Warning: This game contains content that may be offensive to some players.
-          Play at your own risk!
-        </p>
-      </div>
+        <div className="mt-8 bg-ink text-white rounded-2xl px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+          <b className="display text-3xl tracking-wide">Be the hero. Ruin the hero.</b>
+          <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
+            Start a game ↗
+          </Button>
+        </div>
+      </section>
 
-      <Modal 
-        isOpen={isCreateModalOpen} 
+      <footer className="border-t-[3px] border-ink bg-white py-6 text-xs font-black uppercase tracking-wide">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-wrap justify-between gap-3">
+          <span>© 2026 Super Flawed · All rights wronged.</span>
+          <span>Warning: may contain questionable flaws. Play at your own risk!</span>
+        </div>
+      </footer>
+
+      <Modal
+        isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Create New Game"
+        title="Start a game"
       >
         <PlayerSetup onSubmit={handleCreateGame} buttonText="Create Game" />
       </Modal>
 
-      <Modal 
-        isOpen={isJoinModalOpen} 
+      <Modal
+        isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
-        title="Join Game"
+        title="Join a room"
       >
         <div className="space-y-4">
           <div>
-            <label htmlFor="gameCode" className="block text-sm font-medium text-gray-300 mb-1">
-              Game Code
+            <label htmlFor="gameCode" className="field-label">
+              Room code
             </label>
             <input
               type="text"
@@ -118,7 +181,7 @@ const HomePage = () => {
               value={gameCode}
               onChange={(e) => setGameCode(e.target.value.toUpperCase())}
               placeholder="Enter 6-digit code"
-              className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="field tracking-[0.2em]"
               maxLength={6}
             />
           </div>

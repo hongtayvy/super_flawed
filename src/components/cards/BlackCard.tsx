@@ -4,20 +4,21 @@ interface BlackCardProps {
   text: string;
 }
 
+// The "power" card: the awesome ability everyone is about to ruin.
 const BlackCard = ({ text }: BlackCardProps) => {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, scale: 0.9, rotate: 0 }}
+      animate={{ opacity: 1, scale: 1, rotate: -4 }}
       transition={{ type: 'spring', stiffness: 300 }}
-      className="w-64 h-80 bg-black text-white rounded-xl p-6 shadow-lg flex flex-col relative overflow-hidden"
+      className="w-64 h-80 bg-cobalt text-white rounded-2xl border-4 border-ink shadow-pop-xl p-6 flex flex-col relative overflow-hidden"
     >
-      <div className="absolute top-3 left-3 text-xl font-bold text-gray-600">CAO</div>
+      <span className="text-[11px] font-black uppercase tracking-[0.15em]">⚡ The Superpower</span>
       <div className="flex-grow flex items-center justify-center">
-        <p className="text-xl font-medium text-center">{text}</p>
+        <p className="text-2xl font-black leading-tight text-center tracking-tight">{text}</p>
       </div>
-      <div className="absolute bottom-3 right-3 text-sm font-light text-gray-600">
-        Super Flawed
+      <div className="text-[10px] font-black uppercase tracking-wider">
+        Super Flawed · The Good Part
       </div>
     </motion.div>
   );

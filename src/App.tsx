@@ -11,7 +11,7 @@ function App() {
   return (
     <BrowserRouter>
       <GameProvider>
-        <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+        <div className="min-h-screen bg-ice text-ink flex flex-col">
           <Header />
           <main className="flex-grow">
             <Routes>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Button from '../ui/Button';
+import { getAvatarColor } from '../../utils/avatar';
 
 interface PlayerSetupProps {
   onSubmit: (name: string, avatar: string) => void;
@@ -21,7 +22,7 @@ const PlayerSetup = ({ onSubmit, buttonText }: PlayerSetupProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="playerName" className="block text-sm font-medium text-gray-300 mb-1">
+        <label htmlFor="playerName" className="field-label">
           Your Name
         </label>
         <input
@@ -30,14 +31,14 @@ const PlayerSetup = ({ onSubmit, buttonText }: PlayerSetupProps) => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your name"
-          className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="field"
           required
         />
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Choose Avatar Color
+        <label className="field-label">
+          Pick your hero color
         </label>
         <div className="grid grid-cols-4 gap-3">
           {[0, 1, 2, 3, 4, 5, 6, 7].map((avatarId) => (
@@ -45,9 +46,9 @@ const PlayerSetup = ({ onSubmit, buttonText }: PlayerSetupProps) => {
               key={avatarId}
               type="button"
               onClick={() => setSelectedAvatar(avatarId.toString())}
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-transform ${
+              className={`w-12 h-12 rounded-full border-[3px] border-ink flex items-center justify-center text-xl font-black transition-transform ${
                 selectedAvatar === avatarId.toString() 
-                  ? 'ring-2 ring-offset-2 ring-offset-gray-900 ring-white scale-110' 
+                  ? 'scale-110 shadow-pop-sm' 
                   : ''
               } ${getAvatarColor(avatarId.toString())}`}
               aria-label={`Avatar ${avatarId + 1}`}
@@ -60,30 +61,13 @@ const PlayerSetup = ({ onSubmit, buttonText }: PlayerSetupProps) => {
       
       <Button 
         type="submit" 
-        className="w-full py-2 mt-4 bg-indigo-600 hover:bg-indigo-700"
+        className="w-full mt-4"
         disabled={!name.trim()}
       >
         {buttonText}
       </Button>
     </form>
   );
-};
-
-// Helper function to get a color based on avatar ID
-const getAvatarColor = (avatarId: string) => {
-  const colors = [
-    'bg-purple-700 text-white',
-    'bg-indigo-700 text-white',
-    'bg-blue-700 text-white',
-    'bg-green-700 text-white',
-    'bg-yellow-600 text-white',
-    'bg-orange-700 text-white',
-    'bg-red-700 text-white',
-    'bg-pink-700 text-white',
-  ];
-  
-  const index = parseInt(avatarId) % colors.length;
-  return colors[index || 0];
 };
 
 export default PlayerSetup;

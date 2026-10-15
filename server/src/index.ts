@@ -12,6 +12,7 @@ const allowedOrigins = [
   "https://superflawed.netlify.app", // your production frontend
   "https://6880424d6dd5960008c088c6--superflawed.netlify.app", // Netlify preview
   "http://localhost:5173", // dev
+  "https://super-flawed.victor-yang.workers.dev", // Cloudflare
 ];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));

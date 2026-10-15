@@ -2,7 +2,7 @@
 import { io } from 'socket.io-client';
 
 const URL = import.meta.env.PROD
-  ? 'https://super-flawed-server.onrender.com'
+  ? 'https://super-flawed.onrender.com'
   : 'http://localhost:4000';
 
 export const socket = io(URL, {

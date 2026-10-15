@@ -12,7 +12,7 @@ export const Toaster = () => {
       const timer = setTimeout(() => {
         removeToast(toasts[0].id);
       }, 5000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [toasts, removeToast]);
@@ -26,20 +26,21 @@ export const Toaster = () => {
             initial={{ opacity: 0, y: 50, scale: 0.3 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-            className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden pointer-events-auto"
+            className="bg-ink text-white border-[3px] border-sun rounded-2xl shadow-[4px_5px_0_#3153F5] overflow-hidden pointer-events-auto"
           >
             <div className="p-4 flex">
               <div className="flex-1">
                 {toast.title && (
-                  <h4 className="text-sm font-medium text-white mb-1">{toast.title}</h4>
+                  <h4 className="text-sm font-black mb-1">{toast.title}</h4>
                 )}
                 {toast.description && (
-                  <p className="text-xs text-gray-300">{toast.description}</p>
+                  <p className="text-xs font-bold text-ice">{toast.description}</p>
                 )}
               </div>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="ml-4 text-gray-400 hover:text-white"
+                className="ml-4 text-ice hover:text-sun"
+                aria-label="Dismiss"
               >
                 <X size={16} />
               </button>

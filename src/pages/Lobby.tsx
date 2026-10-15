@@ -1,10 +1,10 @@
-// app/src/pages/Lobby.tsx
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, Play, Bot } from 'lucide-react';
 import Button from '../components/ui/Button';
 import PlayerList from '../components/game/PlayerList';
 import { useGame } from '../contexts/GameContext';
+import type { PlayerType } from '../types/game';
 import { useToast } from '../hooks/useToast';
 import { socket } from '../socket';
 
@@ -35,10 +35,8 @@ const Lobby: React.FC = () => {
 
   useEffect(() => {
 
-    console.log('[useEffect] playerInfo:', playerInfo, 'alreadyJoined:', alreadyJoined.current, 'gameCode:', gameCode);
     if (!alreadyJoined.current && playerInfo.id && gameCode) {
 
-      console.log('[Client] Emitting join-room:', gameCode, playerInfo);
 
       socket.emit('join-room', {
         gameCode,
@@ -57,7 +55,7 @@ const Lobby: React.FC = () => {
 
   // listen for lobby updates & game start / errors
   useEffect(() => {
-    socket.on('lobby-players', (updated: any[]) => {
+    socket.on('lobby-players', (updated: PlayerType[]) => {
       setPlayers(updated);
     });
     socket.on('lobby-error', ({ message }: { message: string }) => {
@@ -119,62 +117,93 @@ const Lobby: React.FC = () => {
   const canStart = playerInfo.isHost && allReady;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 pt-8">
-      <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Lobby: {gameCode}</h1>
-          <button onClick={copyGameCode} className="text-gray-400 hover:text-white">
-            <Copy size={20} />
-          </button>
-        </div>
+    <div className="max-w-5xl mx-auto p-4 pt-8">
+      <span className="pill bg-coral">✳ Your secret hideout</span>
+      <h1 className="display text-[clamp(44px,6vw,72px)] mt-3 mb-6">
+        Assemble the <span className="text-cobalt">mess.</span>
+      </h1>
 
-        {/* Controls */}
-        <div className="flex gap-4 mb-6">
-          {!playerInfo.isHost && (
-            <Button onClick={toggleReady} className={isReady ? 'bg-green-600' : ''}>
-              {isReady ? 'Ready!' : 'Mark Ready'}
+      <div className="grid md:grid-cols-[1.14fr_.86fr] gap-6">
+        <div className="panel">
+          <h2 className="display text-3xl">Your room code</h2>
+          <p className="text-sm font-bold text-muted">Send this code to your future ex-friends.</p>
+          <div className="flex items-center justify-between gap-4 bg-sun border-[3px] border-dashed border-ink rounded-2xl px-5 py-4 my-5">
+            <span className="display text-5xl tracking-[0.15em]">{gameCode.toUpperCase()}</span>
+            <button
+              onClick={copyGameCode}
+              className="flex items-center gap-1 bg-white border-2 border-ink rounded-full px-3 py-2 text-xs font-black"
+              aria-label="Copy room code"
+            >
+              <Copy size={16} /> Copy
+            </button>
+          </div>
+
+          <h2 className="display text-3xl mb-3">The gang</h2>
+          <div className="mb-6">
+            <PlayerList />
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {!playerInfo.isHost && (
+              <Button size="sm" variant={isReady ? 'primary' : 'outline'} onClick={toggleReady}>
+                {isReady ? 'Ready ✓' : "I'm ready ✓"}
+              </Button>
+            )}
+            {playerInfo.isHost && (
+              <>
+                <Button size="sm" variant="outline" onClick={toggleBots}>
+                  <Bot size={16} />
+                  {botsAdded.current ? 'Remove bots' : 'Add bots'}
+                </Button>
+                <Button size="sm" onClick={startGame} disabled={!canStart}>
+                  <Play size={16} />
+                  Start round ↗
+                </Button>
+              </>
+            )}
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => {
+                resetGame();
+                navigate('/');
+              }}
+            >
+              Leave
             </Button>
-          )}
-          {playerInfo.isHost && (
-            <>
-              <Button onClick={toggleBots} className="bg-yellow-600">
-                <Bot size={16} className="mr-1" />
-                {botsAdded.current ? 'Remove Bots' : 'Add Bots'}
-              </Button>
-              <Button onClick={startGame} disabled={!canStart} className="bg-indigo-600">
-                <Play size={16} className="mr-1" />
-                Start
-              </Button>
-            </>
-          )}
-          <Button
-            onClick={() => {
-              resetGame();
-              navigate('/');
-            }}
-            className="bg-red-600"
-          >
-            Leave
-          </Button>
+          </div>
         </div>
 
-        {/* Player List */}
-        <div className="bg-gray-900 rounded-lg p-4 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Players</h2>
-          <PlayerList/>
-        </div>
+        <div className="space-y-6">
+          <div className="relative overflow-hidden bg-cobalt border-[3px] border-ink rounded-3xl min-h-[230px] flex items-center">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-56 w-56 rounded-full border-[25px] border-sun" />
+            <p className="display relative z-10 text-4xl text-white max-w-[200px] pl-6 [text-shadow:4px_4px_0_#17183E]">
+              Same power. Different disasters.
+            </p>
+            <img
+              src="/mascot/point.webp"
+              alt=""
+              className="absolute -bottom-6 -right-4 h-60 -rotate-6"
+            />
+          </div>
 
-        {/* How to Play */}
-        <div className="bg-gray-900 rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-2">How to Play</h2>
-          <ol className="list-decimal pl-5 space-y-1 text-gray-300">
-            <li>Card Czar reads the black card.</li>
-            <li>Others submit a white card.</li>
-            <li>Czar picks the winner.</li>
-            <li>Czar role rotates.</li>
-            <li>First to 10 points wins.</li>
-          </ol>
+          <div className="panel bg-[#F0EEFF]">
+            <h2 className="display text-3xl mb-3">Quick house rules</h2>
+            <ol className="font-extrabold">
+              {[
+                'The judge reveals a superpower card.',
+                'Everyone else plays their funniest flaw.',
+                'The judge picks the worst catch.',
+                'The judge role rotates.',
+                'First to 10 points wins.',
+              ].map((rule, i) => (
+                <li key={rule} className="py-3 border-b border-line last:border-0">
+                  <b className="text-cobalt mr-2">0{i + 1}</b>
+                  {rule}
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </div>
     </div>

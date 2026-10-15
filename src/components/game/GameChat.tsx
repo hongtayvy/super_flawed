@@ -24,8 +24,8 @@ const GameChat = ({ messages, onSendMessage }: GameChatProps) => {
 
   return (
     <div className="flex-grow flex flex-col overflow-hidden">
-      <div className="p-3 border-b border-gray-700">
-        <h3 className="text-lg font-medium">Game Chat</h3>
+      <div className="p-3 border-b-[3px] border-ink">
+        <h3 className="display text-2xl">Trash talk</h3>
       </div>
 
       <div className="flex-grow overflow-y-auto p-3">
@@ -33,16 +33,16 @@ const GameChat = ({ messages, onSendMessage }: GameChatProps) => {
           {messages.map(message => (
             <div key={message.id} className={`flex ${message.playerId === playerInfo.id ? 'justify-end' : ''}`}>
               <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm font-bold ${
                   message.playerId === 'system'
-                    ? 'bg-gray-700 text-gray-300 italic'
+                    ? 'bg-ice text-muted italic border-2 border-line'
                     : message.playerId === playerInfo.id
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-700 text-white'
+                    ? 'bg-cobalt text-white border-2 border-ink'
+                    : 'bg-white text-ink border-2 border-ink'
                 }`}
               >
                 {message.playerId !== 'system' && message.playerId !== playerInfo.id && (
-                  <div className="font-medium text-xs text-gray-300 mb-1">
+                  <div className="font-black text-xs text-muted mb-1">
                     {message.playerName}
                   </div>
                 )}
@@ -54,17 +54,17 @@ const GameChat = ({ messages, onSendMessage }: GameChatProps) => {
         </div>
       </div>
 
-      <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-700 flex">
+      <form onSubmit={handleSendMessage} className="p-3 border-t-[3px] border-ink flex gap-2">
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-grow bg-gray-700 border-none rounded-l-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          placeholder="Say something awful..."
+          className="field flex-grow !py-2"
         />
         <button
           type="submit"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-r-md px-3 flex items-center justify-center"
+          className="bg-sun border-[3px] border-ink rounded-full px-3 flex items-center justify-center disabled:opacity-50"
           disabled={!newMessage.trim()}
         >
           <Send size={18} />

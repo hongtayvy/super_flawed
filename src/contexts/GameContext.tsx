@@ -104,15 +104,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     socket.emit('join-room', { gameCode, player: playerInfo });
 
     const handleSubmissions = (newSubs: CurrentRoundType['submissions']) => {
-          console.log('[CTX] got update-submissions:', newSubs);
 
       setCurrentRound(prev => {
         const updated = { ...prev, submissions: newSubs };
         // if this client is the card czar and everyone else has submitted, move to judging
-        console.log("updated.isCardCzar" + updated.isCardCzar)
-        console.log(newSubs.length === playersRef.current.length - 1)
         if (updated.isCardCzar && newSubs.length === playersRef.current.length - 1) {
-          console.log('[GameContext] All other players have submitted, moving to judging', newSubs);
           setGameState('judging');
         }
         return updated;

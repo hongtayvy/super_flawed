@@ -7,30 +7,28 @@ interface WhiteCardProps {
   isWinner?: boolean;
 }
 
-const WhiteCard = ({ 
-  text, 
+// The "flaw" card: the catch that ruins the power.
+const WhiteCard = ({
+  text,
   isSelected = false,
   isSelectable = false,
-  isWinner = false
+  isWinner = false,
 }: WhiteCardProps) => {
   return (
     <motion.div
-      whileHover={isSelectable ? { scale: 1.05 } : {}}
-      animate={isWinner ? { 
-        scale: [1, 1.05, 1],
-        boxShadow: ['0px 0px 0px rgba(129, 140, 248, 0)', '0px 0px 20px rgba(129, 140, 248, 0.7)', '0px 0px 10px rgba(129, 140, 248, 0.3)'],
-      } : {}}
+      whileHover={isSelectable ? { scale: 1.05, y: -4 } : {}}
+      animate={isWinner ? { scale: [1, 1.05, 1] } : {}}
       transition={{ duration: 0.5, repeat: isWinner ? Infinity : 0, repeatType: 'reverse' }}
-      className={`w-full h-full bg-white text-black rounded-xl p-6 shadow-lg flex flex-col relative ${
-        isSelected ? 'ring-4 ring-indigo-500' : ''
+      className={`w-full h-full rounded-2xl border-[3px] border-ink p-5 flex flex-col relative ${
+        isSelected || isWinner ? 'bg-sun shadow-pop-lg' : 'bg-white shadow-pop-sm'
       } ${isSelectable ? 'cursor-pointer' : ''}`}
       style={{ minWidth: '160px', minHeight: '200px' }}
     >
-      <div className="absolute top-3 left-3 text-xl font-bold text-gray-300">CAO</div>
+      <span className="text-[11px] font-black uppercase tracking-[0.15em]">✳ The Flaw</span>
       <div className="flex-grow flex items-center justify-center">
-        <p className="text-lg font-medium text-center">{text}</p>
+        <p className="text-lg font-black leading-snug text-center tracking-tight">{text}</p>
       </div>
-      <div className="absolute bottom-3 right-3 text-sm font-light text-gray-300">
+      <div className="text-[10px] font-black uppercase tracking-wider text-muted">
         Super Flawed
       </div>
     </motion.div>

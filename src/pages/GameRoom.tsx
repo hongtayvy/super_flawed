@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import type { ChatMessage } from '../types/game';
-import crypto from 'crypto';
 import { useNavigate, useParams } from 'react-router-dom';
 import GameBoard from '../components/game/GameBoard';
 import PlayerHand from '../components/game/PlayerHand';
@@ -125,7 +124,6 @@ const GameRoom = () => {
                 if (idx === null) return;
                 const card = currentRound.hand[idx];
                 const submission = { playerId: playerInfo.id, playerName: playerInfo.name, card };
-                console.log("submission is: " + submission);
                 socket.emit('submit-card', { gameCode: gameId || '', submission });
                 submitSelection(playerInfo.id, idx);
               }}
@@ -133,7 +131,7 @@ const GameRoom = () => {
           </div>
         </div>
 
-        <div className="lg:col-span-1 bg-gray-800 rounded-lg overflow-hidden flex flex-col h-full">
+        <div className="lg:col-span-1 bg-white border-[3px] border-ink rounded-3xl shadow-pop overflow-hidden flex flex-col h-full relative">
           <ScoreBoard 
             players={players}
             cardCzarId={currentRound.cardCzarId}
@@ -163,7 +161,7 @@ const GameRoom = () => {
                 resetGame();
                 navigate('/');
               }}
-              className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded"
+              className="w-full bg-coral border-[3px] border-ink rounded-full py-2 text-sm font-black uppercase shadow-pop-sm hover:-translate-y-0.5 transition-transform"
             >
               Leave Game
             </button>

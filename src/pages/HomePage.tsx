@@ -29,11 +29,9 @@ const HomePage = () => {
     };
 
     setPlayerInfo(player);
-    console.log('[HomePage] Emitting join-room for host:', player.name, newGameCode);
 
     // Add acknowledgment-based navigation
     socket.emit('join-room', { gameCode: newGameCode, player }, () => {
-      console.log('[HomePage] Host joined room, navigating to lobby');
       setIsCreateModalOpen(false);
       navigate(`/lobby?code=${newGameCode}`);
     });

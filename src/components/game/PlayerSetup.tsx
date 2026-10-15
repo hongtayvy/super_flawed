@@ -14,7 +14,6 @@ const PlayerSetup = ({ onSubmit, buttonText }: PlayerSetupProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      console.log('[PlayerSetup] Submitting:', name, selectedAvatar);
       onSubmit(name, selectedAvatar);
     }
   };

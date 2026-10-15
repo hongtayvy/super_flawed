@@ -57,7 +57,7 @@ const GameBoard = () => {
           </div>
         );
         
-      case 'roundEnd':
+      case 'roundEnd': {
         const winningPlayer = winner ? winner.playerName : 'Unknown';
         const winningCard = winner ? winner.card.text : '';
         
@@ -76,7 +76,8 @@ const GameBoard = () => {
             </div>
           </div>
         );
-        
+      }
+
       default:
         return <div>Loading game...</div>;
     }

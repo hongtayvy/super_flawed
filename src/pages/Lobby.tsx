@@ -1,10 +1,10 @@
-// app/src/pages/Lobby.tsx
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, Play, Bot } from 'lucide-react';
 import Button from '../components/ui/Button';
 import PlayerList from '../components/game/PlayerList';
 import { useGame } from '../contexts/GameContext';
+import type { PlayerType } from '../types/game';
 import { useToast } from '../hooks/useToast';
 import { socket } from '../socket';
 
@@ -35,10 +35,8 @@ const Lobby: React.FC = () => {
 
   useEffect(() => {
 
-    console.log('[useEffect] playerInfo:', playerInfo, 'alreadyJoined:', alreadyJoined.current, 'gameCode:', gameCode);
     if (!alreadyJoined.current && playerInfo.id && gameCode) {
 
-      console.log('[Client] Emitting join-room:', gameCode, playerInfo);
 
       socket.emit('join-room', {
         gameCode,
@@ -57,7 +55,7 @@ const Lobby: React.FC = () => {
 
   // listen for lobby updates & game start / errors
   useEffect(() => {
-    socket.on('lobby-players', (updated: any[]) => {
+    socket.on('lobby-players', (updated: PlayerType[]) => {
       setPlayers(updated);
     });
     socket.on('lobby-error', ({ message }: { message: string }) => {

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import type { ChatMessage } from '../types/game';
-import crypto from 'crypto';
 import { useNavigate, useParams } from 'react-router-dom';
 import GameBoard from '../components/game/GameBoard';
 import PlayerHand from '../components/game/PlayerHand';
@@ -125,7 +124,6 @@ const GameRoom = () => {
                 if (idx === null) return;
                 const card = currentRound.hand[idx];
                 const submission = { playerId: playerInfo.id, playerName: playerInfo.name, card };
-                console.log("submission is: " + submission);
                 socket.emit('submit-card', { gameCode: gameId || '', submission });
                 submitSelection(playerInfo.id, idx);
               }}

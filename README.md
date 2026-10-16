@@ -48,7 +48,7 @@ There are 17 twists (about 1 round in 6 has one). Some need a minimum number of 
 | **Civilian Casualty** | After the winner, the judge picks one other flaw (anonymously). Its author loses a point if they have one. Automatic if only one other flaw. |
 | **Unmasked** | Authors are shown by name while judging. |
 | **Crossover Event** | A second power is drawn. Flaws must ruin both. |
-| **Flashpoint** | The timeline resets: every deck is reshuffled from scratch (all discards go back in) and everyone is dealt a brand-new hand. |
+| **Reboot** | Every deck is reshuffled from scratch (all discards go back in) and everyone is dealt a brand-new hand. |
 | **Alternate Timeline** | After the winner scores, **first place and last place swap points**. Ties for first or last are broken at random. |
 | **Power Outage** | The power is hidden from players while they play. It is revealed at judging (the judge still sees it). |
 | **Arch Nemesis** | The winner scores, and the highest-scoring *other* player loses a point (all tied leaders lose one). |

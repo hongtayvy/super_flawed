@@ -31,7 +31,7 @@ export class Deck<T> {
     this.reshuffle();
   }
 
-  // Put every discarded card back and reshuffle (Flashpoint).
+  // Put every discarded card back and reshuffle (Reboot).
   resetAll() {
     this.reshuffle();
   }

@@ -154,9 +154,9 @@ export const TWISTS: TwistDef[] = [
     judgingPrompt: 'Crossover Event: which flaw ruins BOTH powers best?',
   },
   {
-    id: 'flashpoint',
-    name: 'Flashpoint',
-    description: 'The timeline resets! Every deck is reshuffled from scratch and everyone gets a brand-new hand.',
+    id: 'reboot',
+    name: 'Reboot',
+    description: 'Reboot! Every deck is reshuffled from scratch and everyone gets a brand-new hand.',
     redeal: 'reset',
   },
   {

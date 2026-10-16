@@ -417,7 +417,7 @@ export class Room {
     else this.beginSubmitting();
   }
 
-  // Flashpoint: every deck resets and everyone gets new cards.
+  // Reboot: every deck resets and everyone gets new cards.
   // Multiverse Mixup: hands are pooled and dealt back out.
   private redealHands(mode: 'reset' | 'swap') {
     if (mode === 'reset') {

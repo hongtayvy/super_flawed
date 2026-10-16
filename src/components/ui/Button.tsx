@@ -1,7 +1,7 @@
 import { ButtonHTMLAttributes } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ink';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -21,7 +21,6 @@ const Button = ({
     secondary: 'bg-cobalt text-white',
     outline: 'bg-white text-ink',
     danger: 'bg-coral text-ink',
-    ink: 'bg-ink text-white',
   };
 
   const sizeStyles = {

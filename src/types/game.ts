@@ -1,58 +1,53 @@
-export interface PlayerType {
+// Wire types: keep in sync with server/src/types.ts
+export interface Card {
+  id: string;
+  text: string;
+}
+
+export type PowerKind = 'power' | 'wildcard';
+
+export interface PowerCard extends Card {
+  kind: PowerKind;
+}
+
+export type Phase = 'lobby' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
+
+// What a client is allowed to see. Never includes other players' hands or
+// the authors of flaws before judging is over.
+export interface PublicPlayer {
+  id: string;
+  name: string;
+  avatar: string;
+  isHost: boolean;
   isBot: boolean;
-  id: string;
-  name: string;
-  avatar: string;
-  isHost: boolean;
-  score: number;
   isReady: boolean;
+  score: number;
+  connected: boolean;
 }
 
-export interface CardType {
-  id: string;
-  text: string;
+export interface RoomState {
+  gameCode: string;
+  phase: Phase;
+  you: string;
+  players: PublicPlayer[];
+  settings: { timerSeconds: number; timerOptions: number[] };
+  rules: { winScore: number; minPlayers: number; maxPlayers: number };
+  hand: Card[];
+  round: RoundView | null;
+  gameWinnerId: string | null;
 }
 
-export interface SubmissionType {
-  playerId: string;
-  playerName: string;
-  card: CardType;
-}
-
-export interface WinnerType {
-  playerId: string;
-  playerName: string;
-  card: CardType;
-}
-
-export interface CurrentRoundType {
-  roundNumber: number;
-  cardCzarId: string;
-  isCardCzar: boolean;
-  blackCard: CardType;
-  hand: CardType[];
-  selectedCardIndex: number | null;
-  submissions: SubmissionType[];
-  winner: WinnerType | null;
-}
-
-export interface PlayerInfoType {
-  id: string;
-  name: string;
-  avatar: string;
-  isHost: boolean;
-}
-
-export interface GameChatProps {
-  gameId: string;
-  messages: ChatMessage[];
-  onSendMessage: (text: string) => void;
-}
-
-export interface ChatMessage {
-  id: string;
-  playerId: string;
-  playerName: string;
-  text: string;
-  timestamp: number;
+export interface RoundView {
+  number: number;
+  judgeId: string;
+  power: PowerCard;
+  twist: { id: string; name: string; description: string; judgingPrompt?: string } | null;
+  roundValue: number;
+  submittedIds: string[];
+  skippedIds: string[];
+  deadline: number | null;
+  // Anonymous during judging. Authors are only revealed once the round ends.
+  entries: { id: string; text: string; mine: boolean; playerId?: string; playerName?: string }[];
+  target: { prompt: string; eligibleIds: string[] } | null;
+  result: { winnerId: string | null; winnerText: string | null; note: string } | null;
 }

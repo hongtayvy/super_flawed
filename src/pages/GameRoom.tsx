@@ -1,164 +1,46 @@
-import { useEffect, useState } from 'react';
-import type { ChatMessage } from '../types/game';
 import { useNavigate, useParams } from 'react-router-dom';
 import GameBoard from '../components/game/GameBoard';
 import PlayerHand from '../components/game/PlayerHand';
 import ScoreBoard from '../components/game/ScoreBoard';
-import GameChat from '../components/game/GameChat';
 import RoundInfo from '../components/game/RoundInfo';
 import { useGame } from '../contexts/GameContext';
-import { socket } from '../socket';
+import { useRoomSession } from '../hooks/useRoomSession';
 
 const GameRoom = () => {
   const { gameId } = useParams<{ gameId: string }>();
+  const code = (gameId || '').toUpperCase();
   const navigate = useNavigate();
+  const { leaveRoom, connected } = useGame();
+  const state = useRoomSession(code, 'game');
 
-  const {
-    playerInfo,
-    gameState,
-    currentRound,
-    nextRound,
-    players,
-    selectCard,
-    submitSelection,
-    selectWinner,
-    resetGame,
-  } = useGame();
-
-  // Chat state & handlers
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-
-  useEffect(() => {
-    socket.on('chat-message', (message: ChatMessage) => {
-      setChatMessages(prev => [...prev, message]);
-    });
-    return () => {
-      socket.off('chat-message');
-    };
-  }, []);
-
-
-  const [showScoreboard, setShowScoreboard] = useState(false);
-
-  // Join room for game events and chat
-  useEffect(() => {
-    if (gameId && playerInfo.name) {
-      socket.emit('join-room', { gameCode: gameId, player: playerInfo });
-    }
-    return () => {
-      if (gameId) {
-        socket.emit('leave-room', { gameCode: gameId, playerId: playerInfo.id });
-      }
-    };
-  }, [gameId, playerInfo]);
-
-  useEffect(() => {
-    if (gameState === 'roundEnd' && currentRound.winner) {
-      const timer = setTimeout(() => {
-        nextRound();
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [gameState, currentRound.winner, nextRound]);
-
-  useEffect(() => {
-    if (gameState === 'selecting') {
-      const otherPlayers = players.filter(p => p.id !== playerInfo.id && p.isBot);
-
-      const submissionTimer = setTimeout(() => {
-        otherPlayers.forEach(player => {
-          if (!currentRound.submissions.some(s => s.playerId === player.id)) {
-            const randomCard = {
-              ...currentRound.hand[Math.floor(Math.random() * currentRound.hand.length)],
-            };
-            submitSelection(player.id, null, randomCard);
-          }
-        });
-      }, 3000);
-
-      return () => clearTimeout(submissionTimer);
-    }
-  }, [gameState, currentRound, players, submitSelection, playerInfo.id]);
-
-  useEffect(() => {
-    if (gameState === 'judging') {
-      const submissions = currentRound.submissions;
-      const czar = players.find(p => p.id === currentRound.cardCzarId);
-      const isCzarBot = czar?.isBot;
-
-      if (isCzarBot && submissions.length === players.length - 1) {
-        const timer = setTimeout(() => {
-          const randomWinner = submissions[Math.floor(Math.random() * submissions.length)];
-          selectWinner(randomWinner.playerId);
-        }, 4000);
-
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [gameState, currentRound, players, selectWinner]);
+  if (!state || !state.round) {
+    return <div className="p-8 text-center font-black uppercase tracking-wide">Loading the chaos...</div>;
+  }
 
   return (
-    <div className="max-w-7xl mx-auto p-2 md:p-4 h-[calc(100vh-64px)] flex flex-col">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
-        <div className="lg:col-span-3 flex flex-col h-full">
-          <RoundInfo 
-            round={currentRound.roundNumber}
-            cardCzar={players.find(p => p.id === currentRound.cardCzarId)?.name || ''}
-            gameState={gameState}
-            onShowScoreboard={() => setShowScoreboard(true)}
-          />
-
-          <div className="flex-grow overflow-hidden">
-            <GameBoard />
+    <div className="max-w-7xl mx-auto p-2 md:p-4 min-h-[calc(100vh-72px)] flex flex-col">
+      {!connected && (
+        <div className="mb-3 rounded-2xl border-[3px] border-ink bg-coral px-4 py-2 text-sm font-black text-center">
+          Connection lost. Reconnecting, your seat is saved...
+        </div>
+      )}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-grow">
+        <div className="lg:col-span-3 flex flex-col gap-3">
+          <RoundInfo state={state} />
+          <div className="flex-grow">
+            <GameBoard state={state} />
           </div>
-
-          <div className="h-1/3 min-h-[200px]">
-            <PlayerHand 
-              hand={currentRound.hand}
-              selectedCardIndex={currentRound.selectedCardIndex}
-              isCardCzar={currentRound.isCardCzar}
-              gameState={gameState}
-              onSelectCard={selectCard}
-              onSubmitCard={() => {
-                const idx = currentRound.selectedCardIndex;
-                if (idx === null) return;
-                const card = currentRound.hand[idx];
-                const submission = { playerId: playerInfo.id, playerName: playerInfo.name, card };
-                socket.emit('submit-card', { gameCode: gameId || '', submission });
-                submitSelection(playerInfo.id, idx);
-              }}
-            />
+          <div className="min-h-[260px]">
+            <PlayerHand state={state} />
           </div>
         </div>
 
-        <div className="lg:col-span-1 bg-white border-[3px] border-ink rounded-3xl shadow-pop overflow-hidden flex flex-col h-full relative">
-          <ScoreBoard 
-            players={players}
-            cardCzarId={currentRound.cardCzarId}
-            isOpen={showScoreboard}
-            onClose={() => setShowScoreboard(false)}
-          />
-
-          <GameChat
-            gameId={gameId || ''}
-            messages={chatMessages}
-            onSendMessage={(text: string) => {
-              const msg: ChatMessage = {
-                id: crypto.randomUUID(),
-                playerId: playerInfo.id,
-                playerName: playerInfo.name,
-                text,
-                timestamp: Date.now(),
-              };
-              socket.emit('chat-message', { gameCode: gameId, message: msg });
-              setChatMessages(prev => [...prev, msg]);
-            }}
-          />
-
+        <div className="lg:col-span-1 bg-white border-[3px] border-ink rounded-3xl shadow-pop overflow-hidden flex flex-col self-start">
+          <ScoreBoard state={state} />
           <div className="p-4">
             <button
               onClick={() => {
-                resetGame();
+                leaveRoom();
                 navigate('/');
               }}
               className="w-full bg-coral border-[3px] border-ink rounded-full py-2 text-sm font-black uppercase shadow-pop-sm hover:-translate-y-0.5 transition-transform"

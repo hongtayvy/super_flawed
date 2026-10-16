@@ -56,7 +56,7 @@ There are 17 twists (about 1 round in 6 has one). Some need a minimum number of 
 | **Arch Nemesis** | The winner scores, and the highest-scoring *other* player loses a point (all tied leaders lose one). |
 | **Multiverse Mixup** | All hands are shuffled together and dealt back out, so you play someone else's cards. |
 | **Public Service Announcement** | Emergency broadcast: only **20 seconds** to play a flaw, whatever the room timer says. |
-| **Breaking the Fourth Wall** *(4+ players)* | The judge looks into everyone's hand and **chooses the flaw each player plays** (players don't pick their own). The players then vote on the flaws, and you can't vote for your own. Most votes wins. **If there is a tie, the judge votes** between the tied flaws. The judge doesn't play a flaw or vote otherwise. |
+| **Judge-ivine Intervention** *(4+ players)* | The judge looks into everyone's hand and **chooses the flaw each player plays** (players don't pick their own). The players then vote on the flaws, and you can't vote for your own. Most votes wins. **If there is a tie, the judge votes** between the tied flaws. The judge doesn't play a flaw or vote otherwise. |
 
 Points never go below 0. Only one twist per round.
 
@@ -147,8 +147,8 @@ All game state flows through the server. Actions are acknowledged with `{ ok, er
 | `start-game` | Host → Server | Start once 3 to 8 players are ready |
 | `set-wildcard` | Judge → Server | Type the made-up power on a Wildcard round |
 | `submit-card` | Client → Server | Play a flaw from your hand |
-| `choose-cards` | Judge → Server | Choose a card from each player's hand (Breaking the Fourth Wall) |
-| `vote` | Client → Server | Vote for a flaw (Breaking the Fourth Wall) |
+| `choose-cards` | Judge → Server | Choose a card from each player's hand (Judge-ivine Intervention) |
+| `vote` | Client → Server | Vote for a flaw (Judge-ivine Intervention) |
 | `pick-winner` | Judge → Server | Pick the winning flaw |
 | `pick-target` | Judge or winner → Server | Make a twist's follow-up pick (Sidekick: the winner; Villain, Civilian Casualty: the judge) |
 | `play-again` | Host → Server | Return to the lobby after a game |

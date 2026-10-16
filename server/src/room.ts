@@ -43,7 +43,7 @@ interface Round {
   deadline: number | null;
   winningEntryId: string | null;
   target: { prompt: string; eligibleIds: string[]; pick: 'player' | 'entry'; chooserId: string } | null;
-  // Group vote (Breaking the Fourth Wall)
+  // Group vote (Judge-ivine Intervention)
   votes: Map<string, string>; // voter id -> entry id
   voteSkipped: Set<string>;
   voteCounts: Map<string, number> | null; // set once the vote is tallied
@@ -489,7 +489,7 @@ export class Room {
     this.broadcast();
   }
 
-  // ---------- Breaking the Fourth Wall: the judge picks everyone's flaw ----------
+  // ---------- Judge-ivine Intervention: the judge picks everyone's flaw ----------
 
   // Everyone but the judge plays; the judge decides which card from each hand.
   private choosablePlayers(): string[] {
@@ -646,7 +646,7 @@ export class Room {
     this.scheduleBots();
   }
 
-  // ---------- group vote (Breaking the Fourth Wall) ----------
+  // ---------- group vote (Judge-ivine Intervention) ----------
 
   private beginVoting() {
     const round = this.round!;

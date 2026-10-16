@@ -137,7 +137,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
             {isJudge && rows ? (
               <div className="w-full max-w-5xl space-y-4">
                 <p className="text-2xl font-black text-center">
-                  Breaking the Fourth Wall! You can see everyone's hand. Choose the flaw each player plays.
+                  Judge-ivine Intervention! You can see everyone's hand. Choose the flaw each player plays.
                 </p>
                 {rows.map((row) => (
                   <div key={row.playerId} className="rounded-3xl border-[3px] border-ink bg-white p-3 shadow-pop-sm">
@@ -178,7 +178,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
               </div>
             ) : (
               <p className="max-w-xl text-center text-2xl font-black">
-                Breaking the Fourth Wall! {nameOf(round.judgeId)} is looking through everyone's hands and choosing the
+                Judge-ivine Intervention! {nameOf(round.judgeId)} is looking through everyone's hands and choosing the
                 flaw each player plays...
               </p>
             )}

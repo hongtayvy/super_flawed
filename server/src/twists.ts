@@ -212,8 +212,8 @@ export const TWISTS: TwistDef[] = [
     submitSeconds: 20,
   },
   {
-    id: 'fourth_wall',
-    name: 'Breaking the Fourth Wall',
+    id: 'judgeivine_intervention',
+    name: 'Judge-ivine Intervention',
     description:
       "The judge looks in everyone's hand and chooses the flaw each player plays. The group votes. If there's a tie, the judge votes.",
     judgePicksCards: true,

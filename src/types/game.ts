@@ -69,9 +69,9 @@ export interface RoundView {
   deadline: number | null;
   // Anonymous during judging. Authors are only revealed once the round ends.
   entries: EntryView[];
-  // Breaking the Fourth Wall: only the judge sees this. Every other player's hand, to pick from.
+  // Judge-ivine Intervention: only the judge sees this. Every other player's hand, to pick from.
   choosing: { playerId: string; name: string; cards: Card[] }[] | null;
-  // Group vote (Breaking the Fourth Wall).
+  // Group vote (Judge-ivine Intervention).
   votedIds: string[];
   myVote: string | null;
   tiebreak: string[] | null; // entry ids the judge must choose between after a tied vote

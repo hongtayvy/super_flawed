@@ -1,105 +1,150 @@
-# 🃏 Super Flawed
+# 🦸 Super Flawed
 
-**Super Flawed** is a real-time multiplayer party game where players create ridiculous superheroes—only to have their powers hilariously ruined by other players. Inspired by *Cards Against Humanity*, the game thrives on creativity, chaos, and quick wit.
+**Super Flawed** is a real-time multiplayer party game with a superhero skin. Every round a great superpower gets flipped, and everyone else races to sabotage it with the funniest possible flaw.
 
-## 🚀 Live Demo
+**Play it:** https://super-flawed.victor-yang.workers.dev (the first connection after a quiet spell can take about a minute while the free backend wakes up).
 
-Coming soon!  
-To play locally, follow the steps in [Running Locally](#-running-locally).
+## 🎮 How to play
 
-## 🎮 Game Overview
+Private rooms for **3 to 8 players**. Create a room, share the code or invite link, and everyone joins from the lobby.
 
-- One player becomes the **Super Hero** each round.
-- A random **Superpower** is drawn.
-- Everyone else submits a **Flaw Card** to sabotage it.
-- The Super Hero picks the funniest or most devastating combo.
-- First player to 5 points wins!
+1. **The judge flips a card** from the Super Power deck.
+2. **Everyone except the judge** plays a **Flaw** card from their hand to sabotage that power. The judge never plays a flaw in a normal round.
+3. **The judge picks exactly one winner** (no ties). Flaws are anonymous to the judge, and nobody sees anyone else's flaw until judging starts. Authors are revealed after the pick.
+4. **The winner scores a point.** The judge role then passes to the next player.
+5. **First to 5 points wins.** If the lead is tied at 5 or more, play continues until someone is ahead.
 
-## 🛠️ Tech Stack
+### Judge rotation
 
-| Layer      | Tech                          |
-|------------|-------------------------------|
-| Frontend   | React + TypeScript + Vite     |
-| Backend    | Node.js + Express             |
-| Realtime   | Socket.IO                     |
-| Styling    | CSS Modules                   |
+Strict and automatic. The next player in the queue judges each round. After everyone has judged, the queue resets and cycles again. It is not choosable.
 
-## 📁 Project Structure
+### Decks
+
+- **Super Power deck** holds powers, **Plot Twists** and one **Wildcard**, all shuffled together. There is no separate twist deck or flip.
+- **Flaw deck** reshuffles its discards back in when it runs out. Hands are 7 cards and refill after every round.
+- Powers are generic descriptions only. No licensed characters.
+
+### Plot Twists and the Wildcard
+
+Most draws are a normal power. Occasionally a Plot Twist is drawn and modifies that round for everyone, while the round still gets a normal power. A round never stacks two twists: if a twist is drawn straight after another, the deck reshuffles and redraws.
+
+| Twist | Effect |
+|-------|--------|
+| Double Jeopardy | The round is worth 2 points |
+| Mirror Universe | The judge picks the **least** funny flaw, and it wins |
+| Sidekick | The winner's point is also given to another player (judge chooses) |
+| Villain | The winner also steals an earned point from another player (judge chooses) |
+
+**Wildcard:** the judge improvises a power out loud, then play continues normally.
+
+Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts) (id, name, description, optional effect hooks), so adding one means adding an object.
+
+### Disconnects and reconnecting
+
+- On first join the server issues a persistent **player ID**, separate from the socket ID. The client keeps it in `localStorage`.
+- Hand, score and judge-queue position belong to the player ID. On refresh, a new tab or a dropped connection the client sends its ID and the server re-attaches the existing state.
+- If a round is waiting on a disconnected player, it waits a grace period (60 seconds by default), then **skips them for that round only**. They are never removed from the game.
+- The host can set an optional **flaw timer** (off, 60s or 90s) in the lobby.
+
+## 🛠️ Tech stack
+
+| Layer    | Tech                                        |
+|----------|---------------------------------------------|
+| Frontend | React + TypeScript + Vite                   |
+| Styling  | Tailwind CSS                                |
+| Backend  | Node.js + Express                           |
+| Realtime | Socket.IO                                   |
+| Hosting  | Cloudflare Workers (client), Render (server) |
+
+## 📁 Project structure
 
 ```
 super_flawed/
-├── client/                # React frontend
-│   ├── components/        # Reusable UI elements
-│   ├── pages/             # Lobby, Game, Results pages
-│   ├── types/             # Shared TypeScript types
-│   └── utils/             # Card shuffling, game helpers
-│
-├── server/                # Node.js + Socket.IO backend
-│   ├── game/              # Game state, card logic, socket handlers
-│   └── index.js           # Server entry point
-│
-└── README.md              # You’re reading it!
+├── src/                   # React client
+│   ├── components/        # cards/, game/, layout/, ui/
+│   ├── contexts/          # GameContext: socket + room state
+│   ├── hooks/             # useRoomSession, useCountdown, useToast
+│   ├── pages/             # HomePage, Lobby, GameRoom
+│   ├── types/             # Wire types shared with the server
+│   └── utils/
+├── public/                # Static assets (mascot art, favicon)
+├── server/                # Node + Socket.IO game server
+│   └── src/
+│       ├── index.ts       # Socket handlers
+│       ├── room.ts        # Game engine: rounds, judging, reconnect
+│       ├── cards.ts       # Power and Flaw card data
+│       ├── twists.ts      # Plot Twists (data)
+│       ├── deck.ts        # Shuffle and reshuffle-on-empty deck
+│       └── config.ts      # Rules and timing
+├── render.yaml            # Render blueprint for the server
+├── wrangler.jsonc         # Cloudflare deploy config for the client
+└── README.md
 ```
 
----
+The server is authoritative: it deals hands, scores rounds and decides who may see what. Each client only ever receives its own view of the room.
 
-## 🧪 Running Locally
-
-### 1. Clone the repo
+## 🧪 Running locally
 
 ```bash
 git clone https://github.com/hongtayvy/super_flawed.git
 cd super_flawed
 ```
 
-### 2. Start the backend server
+Backend (port 4000):
 
 ```bash
 cd server
 npm install
-node index.js
+npm run dev
 ```
 
-### 3. Start the frontend client
-
-Open a new terminal window:
+Frontend (new terminal, from the repo root):
 
 ```bash
-cd client
 npm install
 npm run dev
 ```
 
-Visit `http://localhost:5173` in your browser to start playing.
+Open `http://localhost:5173`. In development the client talks to `http://localhost:4000`.
 
----
+Server settings can be overridden with environment variables: `PORT`, `RECONNECT_GRACE_MS` (default 60000) and `ROUND_END_MS` (default 6000). Other rules (win score, hand size, player limits, timer options) live in `server/src/config.ts`.
 
-## 📡 Socket.IO Events
+## 📡 Socket.IO events
 
-| Event           | Direction       | Description                         |
-|------------------|------------------|-------------------------------------|
-| `join-room`      | Client → Server  | Player joins the game room          |
-| `start-round`    | Host → Server    | Begin a new round                   |
-| `submit-card`    | Client → Server  | Submit a flaw for judging           |
-| `choose-winner`  | Czar → Server    | Czar selects the round winner       |
-| `update-state`   | Server → Clients | Broadcast updated game state        |
-| `chat-message`   | Bidirectional    | In-game chat messages               |
+All game state flows through the server. Actions are acknowledged with `{ ok, error? }`.
 
----
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `create-room` | Client → Server | Create a private room; returns the code and your player ID |
+| `join-room` | Client → Server | Join by code, or re-attach with a stored player ID |
+| `player-ready` | Client → Server | Toggle ready in the lobby |
+| `toggle-bots` | Host → Server | Add or remove practice bots |
+| `set-timer` | Host → Server | Set the flaw timer (0, 60 or 90 seconds) |
+| `start-game` | Host → Server | Start once 3 to 8 players are ready |
+| `submit-card` | Client → Server | Play a flaw from your hand |
+| `pick-winner` | Judge → Server | Pick the winning flaw |
+| `pick-target` | Judge → Server | Resolve a Sidekick or Villain twist |
+| `play-again` | Host → Server | Return to the lobby after a game |
+| `leave-room` | Client → Server | Leave the room |
+| `update-state` | Server → Client | Your personalised view of the room |
+
+## 🚀 Deploying
+
+- **Server:** Render web service from `server/` (see `render.yaml`). Build `npm install --include=dev && npm run build`, start `node dist/index.js`.
+- **Client:** `npm run build && npx wrangler deploy` from the repo root. Add the deployed origin to `allowedOrigins` in `server/src/index.ts`.
 
 ## 🧱 Roadmap
 
-- [ ] Player avatars and nicknames
+- [ ] More Plot Twists (Time Loop, Origin Story, Narrator Interrupts and others)
+- [ ] Public matchmaking
 - [ ] Leaderboards and match history
-- [ ] Custom game settings
-- [ ] Mobile layout and responsiveness
-- [ ] Card pack editor (custom powers & flaws)
+- [ ] Card pack editor (custom powers and flaws)
 
 ---
 
 ## 👨‍💻 Author
 
-Made with ☕ and 😄 by [Victor Yang](https://github.com/hongtayvy)  Inspired by group chats that got a little out of hand.
+Made with ☕ and 😄 by [Victor Yang](https://github.com/hongtayvy). Inspired by group chats that got a little out of hand.
 
 ---
 

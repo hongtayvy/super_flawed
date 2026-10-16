@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlusCircle, Users } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import PlayerSetup from '../components/game/PlayerSetup';
 import { useGame } from '../contexts/GameContext';
 import { useToast } from '../hooks/useToast';
+import { TWISTS } from '../../server/src/twists';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -79,7 +80,10 @@ const HomePage = () => {
               </Button>
             </div>
             <p className="mt-8 text-xs font-extrabold uppercase tracking-wide text-muted">
-              Best with friends · Worst with powers
+              Best with friends · Worst with powers ·{' '}
+              <Link to="/rules" className="underline underline-offset-4 hover:text-cobalt">
+                How to play
+              </Link>
             </p>
           </div>
 
@@ -117,9 +121,9 @@ const HomePage = () => {
         </div>
         <div className="grid md:grid-cols-3 gap-5">
           {[
-            { n: '01', icon: '⚡', title: 'Get a power', body: 'Each round reveals a superpower card.', bg: 'bg-cobalt text-white' },
-            { n: '02', icon: '✎', title: 'Add a catch', body: 'Play the flaw card that makes the power wonderfully awful.', bg: 'bg-sun' },
-            { n: '03', icon: '★', title: 'Judge the chaos', body: 'One judge picks the funniest flaw. Winner gets the point.', bg: 'bg-lilac' },
+            { n: '01', icon: '⚡', title: 'Flip a power', body: 'The judge flips a superpower card. Watch out: a Plot Twist or a Wildcard can come first.', bg: 'bg-cobalt text-white' },
+            { n: '02', icon: '✎', title: 'Add a catch', body: 'Everyone else secretly plays a flaw from their hand to make the power wonderfully awful.', bg: 'bg-sun' },
+            { n: '03', icon: '★', title: 'Judge the chaos', body: 'The judge picks the funniest flaw, no names shown. Winner scores. First to 5 wins.', bg: 'bg-lilac' },
           ].map((step) => (
             <article
               key={step.n}
@@ -133,7 +137,35 @@ const HomePage = () => {
           ))}
         </div>
 
-        <div className="mt-8 bg-ink text-white rounded-2xl px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="mt-12">
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
+            <h2 className="display text-[clamp(36px,4.5vw,56px)]">
+              {TWISTS.length} <span className="text-coral">plot twists.</span>
+            </h2>
+            <p className="max-w-sm text-sm font-bold text-muted">
+              Every so often the deck throws a curveball that changes the round for everyone: swapped points, hidden powers, a
+              group vote and more.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {TWISTS.map((t) => (
+              <span
+                key={t.id}
+                className="rounded-full border-2 border-ink bg-white px-4 py-2 text-sm font-black shadow-pop-sm"
+              >
+                🌀 {t.name}
+              </span>
+            ))}
+          </div>
+          <Link
+            to="/rules"
+            className="mt-5 inline-block text-sm font-black uppercase tracking-wide underline decoration-[3px] underline-offset-4 hover:text-cobalt"
+          >
+            Read the full rules ↗
+          </Link>
+        </div>
+
+        <div className="mt-12 bg-ink text-white rounded-2xl px-6 py-5 flex flex-wrap items-center justify-between gap-4">
           <b className="display text-3xl tracking-wide">Be the hero. Ruin the hero.</b>
           <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
             Start a game ↗

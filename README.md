@@ -6,6 +6,8 @@
 
 ## 🎮 How to play
 
+The same rules are on the site's **/rules** page. That page and the landing page's twist list read straight from `server/src/twists.ts`, so the list stays in step with the game; the other numbers (win score, hand size, player limits) mirror `server/src/config.ts`.
+
 Private rooms for **3 to 8 players**. Create a room, share the code or invite link, and everyone joins from the lobby.
 
 1. **The judge flips a card** from the Super Power deck.
@@ -87,7 +89,7 @@ super-flawed/
 │   ├── components/        # cards/, game/, layout/, ui/
 │   ├── contexts/          # GameContext: socket + room state
 │   ├── hooks/             # useRoomSession, useCountdown, useToast
-│   ├── pages/             # HomePage, Lobby, GameRoom
+│   ├── pages/             # HomePage, Rules, Lobby, GameRoom
 │   ├── types/             # Wire types shared with the server
 │   └── utils/
 ├── public/                # Static assets (mascot art, favicon)

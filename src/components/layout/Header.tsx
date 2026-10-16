@@ -1,5 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, LogOut } from 'lucide-react';
+import { BookOpen, Home, LogOut } from 'lucide-react';
+
+const navLink =
+  'flex items-center gap-1 px-4 py-2 border-2 border-transparent rounded-full text-xs font-black uppercase tracking-wider hover:border-ink hover:bg-sun';
 
 const Header = () => {
   const location = useLocation();
@@ -17,22 +20,27 @@ const Header = () => {
             </span>
           </Link>
 
-          <Link
-            to="/"
-            className="flex items-center gap-1 px-4 py-2 border-2 border-transparent rounded-full text-xs font-black uppercase tracking-wider hover:border-ink hover:bg-sun"
-          >
-            {isInGame ? (
-              <>
-                <LogOut className="h-4 w-4" />
-                Leave Game
-              </>
-            ) : (
-              <>
-                <Home className="h-4 w-4" />
-                Home
-              </>
+          <nav className="flex items-center gap-1">
+            {!isInGame && (
+              <Link to="/rules" className={navLink}>
+                <BookOpen className="h-4 w-4" />
+                Rules
+              </Link>
             )}
-          </Link>
+            <Link to="/" className={navLink}>
+              {isInGame ? (
+                <>
+                  <LogOut className="h-4 w-4" />
+                  Leave Game
+                </>
+              ) : (
+                <>
+                  <Home className="h-4 w-4" />
+                  Home
+                </>
+              )}
+            </Link>
+          </nav>
         </div>
       </div>
     </header>

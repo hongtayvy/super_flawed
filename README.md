@@ -59,7 +59,7 @@ Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts) (id, nam
 ## 📁 Project structure
 
 ```
-super_flawed/
+super-flawed/
 ├── src/                   # React client
 │   ├── components/        # cards/, game/, layout/, ui/
 │   ├── contexts/          # GameContext: socket + room state
@@ -86,8 +86,8 @@ The server is authoritative: it deals hands, scores rounds and decides who may s
 ## 🧪 Running locally
 
 ```bash
-git clone https://github.com/hongtayvy/super_flawed.git
-cd super_flawed
+git clone https://github.com/hongtayvy/super-flawed.git
+cd super-flawed
 ```
 
 Backend (port 4000):

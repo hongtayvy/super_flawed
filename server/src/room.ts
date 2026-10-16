@@ -629,8 +629,7 @@ export class Room {
     this.broadcast();
   }
 
-  // Most votes wins. A tie goes to the flaw the judge voted for; if the judge voted
-  // for neither, the judge chooses between the tied flaws.
+  // Most votes wins. If there is a tie, the judge picks between the tied flaws.
   private tallyVotes() {
     const round = this.round!;
     const counts = new Map(round.entries.map((e) => [e.id, 0]));
@@ -647,14 +646,8 @@ export class Room {
       return this.resolveWinner(tied[0]);
     }
 
-    const judgeVote = round.votes.get(round.judgeId);
-    const byJudge = tied.find((e) => e.id === judgeVote);
-    if (byJudge) {
-      round.notes.push(`${summary} Tie! The judge's vote broke it.`);
-      return this.resolveWinner(byJudge);
-    }
     if (this.players.get(round.judgeId)?.connected) {
-      round.notes.push(`${summary} Tie!`);
+      round.notes.push(`${summary} Tie! The judge picks the winner.`);
       round.tiebreak = tied.map((e) => e.id);
       this.clearPhaseTimers();
       this.phase = 'judging';

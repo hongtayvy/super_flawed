@@ -208,14 +208,14 @@ export const TWISTS: TwistDef[] = [
   {
     id: 'psa',
     name: 'Public Service Announcement',
-    description: 'Emergency broadcast! You only have 10 seconds to play a flaw.',
-    submitSeconds: 10,
+    description: 'Emergency broadcast! You only have 20 seconds to play a flaw.',
+    submitSeconds: 20,
   },
   {
     id: 'fourth_wall',
     name: 'Breaking the Fourth Wall',
     description:
-      'The judge plays a flaw too, and the whole group votes. Most votes wins. Ties go to the flaw the judge voted for.',
+      'The judge plays a flaw too, and the whole group votes. Most votes wins. If there is a tie, the judge picks.',
     judgeSubmits: true,
     groupVote: true,
     minPlayers: 4,

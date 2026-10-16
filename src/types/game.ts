@@ -10,7 +10,7 @@ export interface PowerCard extends Card {
   kind: PowerKind;
 }
 
-export type Phase = 'lobby' | 'wildcard' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
+export type Phase = 'lobby' | 'twist' | 'wildcard' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
 
 // What a client is allowed to see. Never includes other players' hands or
 // the authors of flaws before judging is over.
@@ -40,7 +40,8 @@ export interface RoomState {
 export interface RoundView {
   number: number;
   judgeId: string;
-  power: PowerCard;
+  // Null while a Plot Twist is on the table and the next power card has not been drawn yet.
+  power: PowerCard | null;
   twist: { id: string; name: string; description: string; judgingPrompt?: string } | null;
   roundValue: number;
   submittedIds: string[];

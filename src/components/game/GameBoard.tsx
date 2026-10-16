@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import BlackCard from '../cards/BlackCard';
 import WhiteCard from '../cards/WhiteCard';
+import TwistCard from '../cards/TwistCard';
 import Button from '../ui/Button';
 import { useGame } from '../../contexts/GameContext';
 import { useToast } from '../../hooks/useToast';
@@ -29,17 +30,18 @@ const GameBoard = ({ state }: { state: RoomState }) => {
     if (!res.ok) toast({ title: res.error || 'That did not work.', variant: 'destructive' });
   };
 
-  const powerCard = <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />;
-
-  const twistBanner = round.twist && (
-    <div className="max-w-md w-full bg-sun border-[3px] border-ink rounded-2xl shadow-pop-sm px-4 py-3 text-center">
-      <span className="text-[11px] font-black uppercase tracking-[0.15em]">🌀 Plot Twist</span>
-      <div className="display text-2xl">{round.twist.name}</div>
-      <p className="text-sm font-bold">{round.twist.description}</p>
+  // The twist (if any) sits beside the power as a separate card; it is never printed on it.
+  const powerCard = round.power && (
+    <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />
+  );
+  const cards = (
+    <div className="flex flex-wrap items-center justify-center gap-8">
+      {round.twist && <TwistCard name={round.twist.name} description={round.twist.description} />}
+      {powerCard}
     </div>
   );
 
-  const wildcardNote = round.power.kind === 'wildcard' && state.phase !== 'wildcard' && (
+  const wildcardNote = round.power?.kind === 'wildcard' && state.phase !== 'wildcard' && (
     <p className="max-w-md text-center text-sm font-bold text-muted">
       {nameOf(round.judgeId)} made up this power. Play the flaw that ruins it.
     </p>
@@ -47,10 +49,18 @@ const GameBoard = ({ state }: { state: RoomState }) => {
 
   const renderContent = () => {
     switch (state.phase) {
+      case 'twist':
+        return (
+          <>
+            {round.twist && <TwistCard name={round.twist.name} description={round.twist.description} large />}
+            <p className="text-2xl font-black text-center">Plot Twist! Drawing the next power card...</p>
+          </>
+        );
+
       case 'wildcard':
         return (
           <>
-            {powerCard}
+            {cards}
             {isJudge ? (
               <form
                 className="w-full max-w-md space-y-3"
@@ -90,7 +100,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
         const iWasSkipped = round.skippedIds.includes(state.you);
         return (
           <>
-            {powerCard}
+            {cards}
             {wildcardNote}
             <div className="text-center font-black text-xl">
               {isJudge ? (
@@ -115,7 +125,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
       case 'judging':
         return (
           <>
-            {powerCard}
+            {cards}
             <p className="text-2xl font-black text-center max-w-xl">
               {isJudge
                 ? (round.twist?.judgingPrompt ?? 'Which flaw ruins it best?')
@@ -146,8 +156,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
       case 'target':
         return (
           <>
-            {powerCard}
-            {twistBanner}
+            {cards}
             {isJudge && round.target ? (
               <div className="text-center">
                 <p className="text-2xl font-black mb-4">{round.target.prompt}</p>
@@ -169,7 +178,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
         const result = round.result;
         return (
           <>
-            {powerCard}
+            {cards}
             <div className="text-center">
               <h3 className="display text-4xl mb-3">
                 {result?.winnerId ? `Power ruined by ${nameOf(result.winnerId)}!` : 'No winner this round'}
@@ -212,7 +221,6 @@ const GameBoard = ({ state }: { state: RoomState }) => {
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-5 p-4">
-      {state.phase !== 'target' && state.phase !== 'gameOver' && twistBanner}
       {renderContent()}
     </div>
   );

@@ -32,7 +32,7 @@ After editing, run `npm run check-cards` in `server/` (checks duplicates, length
 
 ### Plot Twists and the Wildcard
 
-Most draws are a normal power. Occasionally a Plot Twist is drawn and modifies that round for everyone, while the round still gets a normal power. A round never stacks two twists: if a twist is drawn straight after another, the deck reshuffles and redraws.
+Most draws are a normal power. Occasionally the card drawn is a **Plot Twist**. A twist is its own card: it is revealed on its own (about 5 seconds, `TWIST_REVEAL_MS`), and only then is the **next card drawn** to be the round's power. The twist stays on the table beside the power, never printed on it, and modifies that round for everyone. A round never stacks two twists: if a twist is drawn straight after another, the deck reshuffles and redraws.
 
 | Twist | Effect |
 |-------|--------|

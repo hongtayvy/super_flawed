@@ -2,10 +2,11 @@ import { useCountdown } from '../../hooks/useCountdown';
 import type { RoomState } from '../../types/game';
 
 const PHASE_LABELS: Record<string, string> = {
+  twist: 'Plot Twist',
   wildcard: 'Wildcard',
   submitting: 'Writing phase',
   judging: 'Judging',
-  target: 'Plot Twist',
+  target: 'Twist effect',
   roundEnd: 'Round complete',
   gameOver: 'Game over',
 };

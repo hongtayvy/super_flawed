@@ -9,7 +9,7 @@ export interface PowerCard extends Card {
   kind: PowerKind;
 }
 
-export type Phase = 'lobby' | 'wildcard' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
+export type Phase = 'lobby' | 'twist' | 'wildcard' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
 
 export interface Player {
   id: string; // persistent player ID, separate from the socket ID
@@ -53,7 +53,8 @@ export interface RoomState {
 export interface RoundView {
   number: number;
   judgeId: string;
-  power: PowerCard;
+  // Null while a Plot Twist is on the table and the next power card has not been drawn yet.
+  power: PowerCard | null;
   twist: { id: string; name: string; description: string; judgingPrompt?: string } | null;
   roundValue: number;
   submittedIds: string[];

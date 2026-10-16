@@ -6,6 +6,8 @@ export const config = {
   maxPlayers: 8,
   // How long a round waits on a disconnected player before skipping them (this round only).
   reconnectGraceMs: Number(process.env.RECONNECT_GRACE_MS) || 60_000,
+  // How long a drawn Plot Twist card is shown on its own before the next power card is drawn.
+  twistRevealMs: Number(process.env.TWIST_REVEAL_MS) || 5_000,
   // Pause on the round result before the next round starts.
   roundEndMs: Number(process.env.ROUND_END_MS) || 6_000,
   // Host-selectable submit timers in seconds. 0 = wait for everyone.

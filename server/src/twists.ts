@@ -1,7 +1,7 @@
 // Plot Twists are data. Add a new object to TWISTS to add a twist; the room engine
 // only reads the generic fields below and has no per-twist logic of its own.
 
-export interface TwistContext {
+interface TwistContext {
   winnerId: string; // first author of the winning flaw
   scorerIds: string[]; // everyone who scored for the winning flaw
   winningEntryId: string;
@@ -12,7 +12,7 @@ export interface TwistContext {
   entries: { id: string; authorIds: string[] }[];
 }
 
-export interface TwistTarget {
+interface TwistTarget {
   // Who makes the follow-up pick: the judge (default) or the round's winner.
   chooser?: 'judge' | 'winner';
   // What is picked: a player by name, or an (anonymous) flaw.

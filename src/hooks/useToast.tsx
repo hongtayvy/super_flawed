@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-export interface Toast {
+interface Toast {
   id: string;
   title?: string;
   description?: string;

@@ -11,19 +11,25 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
   const { toast } = useToast();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [note, setNote] = useState('');
 
   const round = state.round!;
   const isJudge = round.judgeId === state.you;
   const hasSubmitted = round.submittedIds.includes(state.you);
   const wasSkipped = round.skippedIds.includes(state.you);
-  const canPlay = state.phase === 'submitting' && !isJudge && !hasSubmitted && !wasSkipped;
+  // Narrator Interrupts lets the judge play a flaw too.
+  const judgePlays = Boolean(round.twist?.judgeSubmits);
+  const needsNote = round.twist?.needsNote ?? null;
+  const canPlay =
+    state.phase === 'submitting' && (!isJudge || judgePlays) && !hasSubmitted && !wasSkipped;
 
   // Start each round with nothing selected.
   useEffect(() => {
     setSelectedId(null);
-  }, [round.number]);
+    setNote('');
+  }, [round.number, round.pass]);
 
-  if (isJudge) {
+  if (isJudge && !judgePlays) {
     return (
       <div className="h-full min-h-[200px] flex flex-col items-center justify-center p-4 bg-lilac border-[3px] border-ink rounded-3xl">
         <p className="display text-3xl text-center">You're the judge this round!</p>
@@ -34,7 +40,7 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
   const handleSubmit = async () => {
     if (!selectedId || sending) return;
     setSending(true);
-    const res = await submitCard(selectedId);
+    const res = await submitCard(selectedId, needsNote ? note : undefined);
     setSending(false);
     if (!res.ok) toast({ title: res.error || 'Could not submit that flaw.', variant: 'destructive' });
   };
@@ -44,11 +50,31 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
       <div className="flex justify-between items-center mb-3">
         <h3 className="display text-2xl">Your flaws</h3>
         {state.phase === 'submitting' && !wasSkipped && (
-          <Button onClick={handleSubmit} disabled={!canPlay || !selectedId || sending} size="sm">
+          <Button
+            onClick={handleSubmit}
+            disabled={!canPlay || !selectedId || sending || (Boolean(needsNote) && note.trim().length < 3)}
+            size="sm"
+          >
             {hasSubmitted ? 'Submitted ✓' : 'Submit flaw ⚡'}
           </Button>
         )}
       </div>
+
+      {canPlay && needsNote && (
+        <div className="mb-3">
+          <label htmlFor="origin-note" className="field-label">
+            📖 {needsNote}
+          </label>
+          <input
+            id="origin-note"
+            className="field py-2!"
+            value={note}
+            maxLength={80}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Cursed by a very petty wizard."
+          />
+        </div>
+      )}
 
       <div className="flex-grow overflow-x-auto overflow-y-hidden">
         <div className="flex space-x-4 py-3 px-1 h-full">

@@ -123,7 +123,7 @@ io.on('connection', (socket) => {
   };
 
   action('set-wildcard', (room, id, p) => room.setWildcard(id, p.text));
-  action('submit-card', (room, id, p) => room.submit(id, String(p.cardId)));
+  action('submit-card', (room, id, p) => room.submit(id, String(p.cardId), p.note));
   action('pick-winner', (room, id, p) => room.pickWinner(id, String(p.entryId)));
   action('pick-target', (room, id, p) => room.pickTarget(id, String(p.targetId)));
   action('play-again', (room, id) => {

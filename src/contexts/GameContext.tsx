@@ -25,7 +25,7 @@ interface GameContextType {
   setTimerSeconds: (seconds: number) => void;
   startGame: () => Promise<Ack>;
   setWildcard: (text: string) => Promise<Ack>;
-  submitCard: (cardId: string) => Promise<Ack>;
+  submitCard: (cardId: string, note?: string) => Promise<Ack>;
   pickWinner: (entryId: string) => Promise<Ack>;
   pickTarget: (targetId: string) => Promise<Ack>;
   playAgain: () => void;
@@ -152,7 +152,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setTimerSeconds: (seconds) => socket.emit('set-timer', { seconds }),
     startGame: () => emitWithAck('start-game'),
     setWildcard: (text) => emitWithAck('set-wildcard', { text }),
-    submitCard: (cardId) => emitWithAck('submit-card', { cardId }),
+    submitCard: (cardId, note) => emitWithAck('submit-card', { cardId, note }),
     pickWinner: (entryId) => emitWithAck('pick-winner', { entryId }),
     pickTarget: (targetId) => emitWithAck('pick-target', { targetId }),
     playAgain: () => socket.emit('play-again'),

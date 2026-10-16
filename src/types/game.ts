@@ -37,18 +37,41 @@ export interface RoomState {
   gameWinnerId: string | null;
 }
 
+export interface EntryView {
+  id: string;
+  text: string;
+  note?: string; // Origin Story backstory
+  mine: boolean;
+  // Present only once authors may be seen (after judging, or on Unmasked rounds).
+  authorIds?: string[];
+  authorNames?: string[];
+  scorerIds?: string[]; // who actually scores, when that differs (Alternate Timeline)
+}
+
 export interface RoundView {
   number: number;
   judgeId: string;
   // Null while a Plot Twist is on the table and the next power card has not been drawn yet.
   power: PowerCard | null;
-  twist: { id: string; name: string; description: string; judgingPrompt?: string } | null;
+  power2: PowerCard | null; // Crossover Event
+  twist: {
+    id: string;
+    name: string;
+    description: string;
+    judgingPrompt?: string;
+    needsNote: string | null;
+    judgeSubmits: boolean;
+  } | null;
+  pass: number; // Time Loop plays the same power more than once
+  passes: number;
   roundValue: number;
   submittedIds: string[];
   skippedIds: string[];
   deadline: number | null;
   // Anonymous during judging. Authors are only revealed once the round ends.
-  entries: { id: string; text: string; mine: boolean; playerId?: string; playerName?: string }[];
-  target: { prompt: string; eligibleIds: string[] } | null;
-  result: { winnerId: string | null; winnerText: string | null; note: string } | null;
+  entries: EntryView[];
+  // Flaws shown face-up as they are played (Breaking the Fourth Wall).
+  liveFlaws: { playerId: string; playerName: string; text: string; note?: string }[];
+  target: { prompt: string; eligibleIds: string[]; pick: 'player' | 'entry' } | null;
+  result: { awards: { text: string; note?: string; authorIds: string[]; scorerIds: string[] }[]; note: string } | null;
 }

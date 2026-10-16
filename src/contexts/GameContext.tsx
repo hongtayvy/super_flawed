@@ -90,6 +90,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     socket.on('update-state', onState);
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    // The socket may already be connected before these listeners existed; don't miss that.
+    setConnected(socket.connected);
     return () => {
       socket.off('update-state', onState);
       socket.off('connect', onConnect);

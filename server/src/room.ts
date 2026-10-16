@@ -17,7 +17,7 @@ interface Entry {
 interface Round {
   number: number;
   judgeId: string;
-  power: PowerCard;
+  power: PowerCard | null; // null until drawn: a Plot Twist is revealed first, then the next power
   twist: TwistDef | null;
   drawn: DeckEntry[];
   roundValue: number;
@@ -276,15 +276,18 @@ export class Room {
   private startRound() {
     this.clearPhaseTimers();
     const judgeId = this.nextJudge();
-    const { power, twist, drawn } = this.drawRoundCards();
+    // A Plot Twist is its own card: if it comes up it is shown alone, and only
+    // then is the next power card drawn.
+    const first = this.powerDeck.draw()!;
+    const twist = first.kind === 'twist' ? first.twist : null;
 
     this.roundCounter += 1;
     this.round = {
       number: this.roundCounter,
       judgeId,
-      power,
+      power: first.kind === 'card' ? first.card : null,
       twist,
-      drawn,
+      drawn: [first],
       roundValue: twist?.roundValue ?? 1,
       submissions: new Map(),
       skipped: new Set(),
@@ -295,7 +298,34 @@ export class Room {
       result: null,
     };
 
-    if (power.kind === 'wildcard') this.beginWildcard();
+    if (twist) this.beginTwistReveal();
+    else this.beginPower();
+  }
+
+  private beginTwistReveal() {
+    this.clearPhaseTimers();
+    this.phase = 'twist';
+    this.later(() => this.drawPowerAfterTwist(), config.twistRevealMs);
+    this.broadcast();
+  }
+
+  // Draw the round's power after a Plot Twist. A twist is never drawn straight
+  // after another one: reshuffle and redraw so a round never stacks two twists.
+  private drawPowerAfterTwist() {
+    const round = this.round;
+    if (this.phase !== 'twist' || !round) return;
+    let entry = this.powerDeck.draw()!;
+    for (let guard = 0; entry.kind === 'twist' && guard < 50; guard++) {
+      this.powerDeck.putBackAndReshuffle(entry);
+      entry = this.powerDeck.draw()!;
+    }
+    round.drawn.push(entry);
+    round.power = (entry as { kind: 'card'; card: PowerCard }).card;
+    this.beginPower();
+  }
+
+  private beginPower() {
+    if (this.round!.power!.kind === 'wildcard') this.beginWildcard();
     else this.beginSubmitting();
   }
 
@@ -329,7 +359,7 @@ export class Room {
 
   private applyWildcard(text: string) {
     const round = this.round;
-    if (this.phase !== 'wildcard' || !round) return;
+    if (this.phase !== 'wildcard' || !round?.power) return;
     round.power = { ...round.power, text };
     this.beginSubmitting();
   }
@@ -355,28 +385,6 @@ export class Room {
   private nextJudge(): string {
     if (this.queue.length === 0) this.queue = [...this.players.keys()];
     return this.queue.shift()!;
-  }
-
-  // The draw covers Plot Twists: a twist modifies the round but the round still
-  // gets a normal power, and a twist is never drawn straight after another one.
-  private drawRoundCards() {
-    const drawn: DeckEntry[] = [];
-    let twist: TwistDef | null = null;
-    let entry = this.powerDeck.draw()!;
-    drawn.push(entry);
-
-    if (entry.kind === 'twist') {
-      twist = entry.twist;
-      entry = this.powerDeck.draw()!;
-      for (let guard = 0; entry.kind === 'twist' && guard < 50; guard++) {
-        this.powerDeck.putBackAndReshuffle(entry);
-        entry = this.powerDeck.draw()!;
-      }
-      drawn.push(entry);
-    }
-
-    const power = (entry as { kind: 'card'; card: PowerCard }).card;
-    return { power, twist, drawn };
   }
 
   submit(playerId: string, cardId: string): string | null {
@@ -501,7 +509,7 @@ export class Room {
     // One line per played flaw, so weak cards can be spotted later (win rate per card).
     for (const [playerId, card] of round.submissions) {
       console.log(
-        JSON.stringify({ evt: 'flaw_result', flaw: card.id, power: round.power.id, won: playerId === winnerId }),
+        JSON.stringify({ evt: 'flaw_result', flaw: card.id, power: round.power?.id, won: playerId === winnerId }),
       );
     }
 

@@ -1,6 +1,24 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #17183E;
+  --color-cobalt: #3153F5;
+  --color-sun: #FFE56A;
+  --color-coral: #FF7369;
+  --color-lilac: #B8B5FF;
+  --color-ice: #F8F9FF;
+  --color-mint: #B8F1D0;
+  --color-muted: #5B6080;
+  --color-line: #CED3EF;
+
+  --font-display: Impact, 'Arial Black', sans-serif;
+  --font-body: 'Trebuchet MS', Arial, sans-serif;
+
+  --shadow-pop: 5px 6px 0 #17183E;
+  --shadow-pop-sm: 3px 4px 0 #17183E;
+  --shadow-pop-lg: 8px 9px 0 #17183E;
+  --shadow-pop-xl: 12px 13px 0 #17183E;
+}
 
 @layer base {
   html {

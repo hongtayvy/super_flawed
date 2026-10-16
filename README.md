@@ -51,7 +51,7 @@ Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts) (id, nam
 | Layer    | Tech                                        |
 |----------|---------------------------------------------|
 | Frontend | React + TypeScript + Vite                   |
-| Styling  | Tailwind CSS                                |
+| Styling  | Tailwind CSS 4                              |
 | Backend  | Node.js + Express                           |
 | Realtime | Socket.IO                                   |
 | Hosting  | Cloudflare Workers (client), Render (server) |

@@ -96,7 +96,7 @@ const Lobby = () => {
             </label>
             <select
               id="timer"
-              className="field !py-2 max-w-[220px]"
+              className="field py-2! max-w-[280px]"
               value={state.settings.timerSeconds}
               disabled={!isHost}
               onChange={(e) => setTimerSeconds(Number(e.target.value))}

@@ -4,6 +4,7 @@ import type { RoomState } from '../../types/game';
 const PHASE_LABELS: Record<string, string> = {
   twist: 'Plot Twist',
   wildcard: 'Wildcard',
+  choosing: 'Judge picks cards',
   submitting: 'Writing phase',
   voting: 'Group vote',
   judging: 'Judging',

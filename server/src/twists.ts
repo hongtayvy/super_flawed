@@ -44,8 +44,8 @@ export interface TwistDef {
   extraPower?: boolean; // a second power is drawn and flaws must ruin both
   revealAuthors?: boolean; // authors are shown by name while judging
   teamUp?: boolean; // flaws are grouped into combined entries of 2 (one of 3 when odd)
-  judgeSubmits?: boolean; // the judge also plays a flaw, mixed in anonymously
-  groupVote?: boolean; // the whole table votes for the winner (judge breaks ties)
+  judgePicksCards?: boolean; // the judge looks at every hand and chooses the flaw each player plays
+  groupVote?: boolean; // the players vote for the winner (the judge only votes to break a tie)
 
   // --- setup ---
   redeal?: 'reset' | 'swap'; // reset every deck and deal new hands, or shuffle all hands and deal them back out
@@ -215,8 +215,8 @@ export const TWISTS: TwistDef[] = [
     id: 'fourth_wall',
     name: 'Breaking the Fourth Wall',
     description:
-      'The judge plays a flaw too, and the whole group votes. Most votes wins. If there is a tie, the judge picks.',
-    judgeSubmits: true,
+      "The judge looks in everyone's hand and chooses the flaw each player plays. The group votes. If there's a tie, the judge votes.",
+    judgePicksCards: true,
     groupVote: true,
     minPlayers: 4,
   },

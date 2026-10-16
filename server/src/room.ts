@@ -472,6 +472,7 @@ export class Room {
 
   private beginSubmitting() {
     const round = this.round!;
+    if (round.twist?.judgePicksCards) return this.beginChoosing();
     this.clearPhaseTimers();
     this.phase = 'submitting';
     round.deadline = null;
@@ -488,6 +489,75 @@ export class Room {
     this.broadcast();
   }
 
+  // ---------- Breaking the Fourth Wall: the judge picks everyone's flaw ----------
+
+  // Everyone but the judge plays; the judge decides which card from each hand.
+  private choosablePlayers(): string[] {
+    const round = this.round!;
+    return [...this.players.values()]
+      .filter((p) => p.id !== round.judgeId && !p.left)
+      .map((p) => p.id);
+  }
+
+  private beginChoosing() {
+    const round = this.round!;
+    this.clearPhaseTimers();
+    this.phase = 'choosing';
+    round.deadline = null;
+
+    const seconds = this.settings.timerSeconds;
+    if (seconds > 0) {
+      round.deadline = Date.now() + seconds * 1000;
+      // Out of time: a random card from each hand is played instead.
+      this.later(() => this.finishChoosing(this.randomPicks()), seconds * 1000);
+    }
+    this.checkBlockers();
+    this.scheduleBots();
+    this.broadcast();
+  }
+
+  private randomPicks(): [string, string][] {
+    return this.choosablePlayers().map((id): [string, string] => [id, pick(this.hands.get(id) ?? []).id]);
+  }
+
+  // `picks` is one [playerId, cardId] per player the judge is choosing for.
+  chooseCards(playerId: string, picks: unknown): string | null {
+    const round = this.round;
+    if (this.phase !== 'choosing' || !round) return 'Not choosing cards right now.';
+    if (playerId !== round.judgeId) return 'Only the judge chooses the cards.';
+    if (!Array.isArray(picks)) return 'Pick a card for every player.';
+
+    const wanted = new Set(this.choosablePlayers());
+    const chosen = new Map<string, string>();
+    for (const p of picks) {
+      const target = String(p?.playerId);
+      const cardId = String(p?.cardId);
+      if (!wanted.has(target)) return 'You cannot choose a card for that player.';
+      if (chosen.has(target)) return 'Pick one card per player.';
+      if (!(this.hands.get(target) ?? []).some((c) => c.id === cardId)) return 'That card is not in their hand.';
+      chosen.set(target, cardId);
+    }
+    if (chosen.size !== wanted.size) return 'Pick a card for every player.';
+
+    this.finishChoosing([...chosen]);
+    return null;
+  }
+
+  private finishChoosing(picks: [string, string][]) {
+    const round = this.round;
+    if (this.phase !== 'choosing' || !round) return;
+    for (const [id, cardId] of picks) {
+      const hand = this.hands.get(id) ?? [];
+      const idx = hand.findIndex((c) => c.id === cardId);
+      if (idx === -1) continue;
+      const [card] = hand.splice(idx, 1);
+      round.submissions.set(id, { card });
+    }
+    if (round.submissions.size === 0) this.finishRound('Nobody had a flaw to play. Round skipped.');
+    else this.startJudging();
+    this.broadcast();
+  }
+
   // Strict rotation: next in queue; once everyone has judged the queue resets.
   private nextJudge(): string {
     if (this.queue.length === 0) this.queue = [...this.players.keys()];
@@ -497,7 +567,8 @@ export class Room {
   submit(playerId: string, cardId: string): string | null {
     const round = this.round;
     if (this.phase !== 'submitting' || !round) return 'Not accepting flaws right now.';
-    if (playerId === round.judgeId && !round.twist?.judgeSubmits) return 'The judge does not submit a flaw.';
+    if (playerId === round.judgeId) return 'The judge does not submit a flaw.';
+    if (round.twist?.judgePicksCards) return 'The judge chooses your flaw this round.';
     if (round.skipped.has(playerId)) return 'You were skipped this round.';
     if (round.submissions.has(playerId)) return 'You already submitted a flaw.';
 
@@ -523,10 +594,8 @@ export class Room {
   private pendingSubmitters(): string[] {
     const round = this.round;
     if (!round) return [];
-    const judgePlays = Boolean(round.twist?.judgeSubmits);
     return [...this.players.keys()].filter(
-      (id) =>
-        (id !== round.judgeId || judgePlays) && !round.skipped.has(id) && !round.submissions.has(id),
+      (id) => id !== round.judgeId && !round.skipped.has(id) && !round.submissions.has(id),
     );
   }
 
@@ -596,11 +665,13 @@ export class Room {
     this.broadcast();
   }
 
-  // Everyone at the table votes, the judge included. You cannot vote for your own flaw.
+  // The players vote (the judge only decides ties). You cannot vote for your own flaw.
   vote(playerId: string, entryId: string): string | null {
     const round = this.round;
     if (this.phase !== 'voting' || !round) return 'Not voting right now.';
-    if (!this.players.has(playerId) || round.voteSkipped.has(playerId)) return 'You are not voting this round.';
+    if (!this.players.has(playerId) || playerId === round.judgeId || round.voteSkipped.has(playerId)) {
+      return 'You are not voting this round.';
+    }
     const entry = round.entries.find((e) => e.id === entryId);
     if (!entry) return 'Unknown flaw.';
     if (entry.authorIds.includes(playerId)) return 'You cannot vote for your own flaw.';
@@ -614,7 +685,9 @@ export class Room {
   private pendingVoters(): string[] {
     const round = this.round;
     if (!round) return [];
-    return [...this.players.keys()].filter((id) => !round.voteSkipped.has(id) && !round.votes.has(id));
+    return [...this.players.keys()].filter(
+      (id) => id !== round.judgeId && !round.voteSkipped.has(id) && !round.votes.has(id),
+    );
   }
 
   private checkVoteDone() {
@@ -891,6 +964,7 @@ export class Room {
       case 'target':
         return get(round.target ? [round.target.chooserId] : []);
       case 'wildcard':
+      case 'choosing':
       case 'judging':
         return get([round.judgeId]);
       default:
@@ -932,7 +1006,7 @@ export class Room {
       // The person who had to pick is gone: the twist's effect simply does not happen.
       round.notes.push(`${player.name} was away, so the Plot Twist did nothing.`);
       this.completePass();
-    } else if (this.phase === 'wildcard' || this.phase === 'judging') {
+    } else if (this.phase === 'wildcard' || this.phase === 'choosing' || this.phase === 'judging') {
       this.finishRound(`${player.name} (the judge) disconnected. Round skipped.`);
     }
     this.broadcast();
@@ -950,14 +1024,17 @@ export class Room {
       this.later(() => this.applyWildcard(pick(BOT_WILDCARDS)), rand(1500, 3000));
     } else if (this.phase === 'submitting') {
       for (const bot of bots) {
-        if (bot.id === round.judgeId && !round.twist?.judgeSubmits) continue;
+        if (bot.id === round.judgeId) continue;
         this.later(() => {
           const hand = this.hands.get(bot.id) ?? [];
           if (hand.length) this.submit(bot.id, pick(hand).id);
         }, rand(1000, 3500));
       }
+    } else if (this.phase === 'choosing' && judgeIsBot) {
+      this.later(() => this.finishChoosing(this.randomPicks()), rand(2000, 3500));
     } else if (this.phase === 'voting') {
       for (const bot of bots) {
+        if (bot.id === round.judgeId) continue;
         this.later(() => {
           const options = round.entries.filter((e) => !e.authorIds.includes(bot.id));
           if (options.length) this.vote(bot.id, pick(options).id);
@@ -1054,7 +1131,7 @@ export class Room {
             name: twist.name,
             description: twist.description,
             judgingPrompt: twist.judgingPrompt,
-            judgeSubmits: Boolean(twist.judgeSubmits),
+            judgePicksCards: Boolean(twist.judgePicksCards),
             groupVote: Boolean(twist.groupVote),
           }
         : null,
@@ -1065,6 +1142,15 @@ export class Room {
       skippedIds: [...round.skipped],
       deadline: round.deadline,
       entries,
+      // Only the judge gets to see everyone's hand, and only while choosing.
+      choosing:
+        this.phase === 'choosing' && viewerId === round.judgeId
+          ? this.choosablePlayers().map((id) => ({
+              playerId: id,
+              name: this.players.get(id)?.name ?? '?',
+              cards: this.hands.get(id) ?? [],
+            }))
+          : null,
       votedIds: [...round.votes.keys()].filter((id) => !round.voteSkipped.has(id)),
       myVote: round.votes.get(viewerId) ?? null,
       tiebreak: round.tiebreak,

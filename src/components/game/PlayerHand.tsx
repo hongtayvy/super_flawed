@@ -16,17 +16,14 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
   const isJudge = round.judgeId === state.you;
   const hasSubmitted = round.submittedIds.includes(state.you);
   const wasSkipped = round.skippedIds.includes(state.you);
-  // Breaking the Fourth Wall lets the judge play a flaw too.
-  const judgePlays = Boolean(round.twist?.judgeSubmits);
-  const canPlay =
-    state.phase === 'submitting' && (!isJudge || judgePlays) && !hasSubmitted && !wasSkipped;
+  const canPlay = state.phase === 'submitting' && !isJudge && !hasSubmitted && !wasSkipped;
 
   // Start each round with nothing selected.
   useEffect(() => {
     setSelectedId(null);
   }, [round.number, round.pass]);
 
-  if (isJudge && !judgePlays) {
+  if (isJudge) {
     return (
       <div className="h-full min-h-[200px] flex flex-col items-center justify-center p-4 bg-lilac border-[3px] border-ink rounded-3xl">
         <p className="display text-3xl text-center">You're the judge this round!</p>

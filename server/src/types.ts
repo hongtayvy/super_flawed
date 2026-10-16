@@ -9,7 +9,7 @@ export interface PowerCard extends Card {
   kind: PowerKind;
 }
 
-export type Phase = 'lobby' | 'twist' | 'wildcard' | 'submitting' | 'voting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
+export type Phase = 'lobby' | 'twist' | 'wildcard' | 'choosing' | 'submitting' | 'voting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
 
 export interface Player {
   id: string; // persistent player ID, separate from the socket ID
@@ -71,7 +71,7 @@ export interface RoundView {
     name: string;
     description: string;
     judgingPrompt?: string;
-    judgeSubmits: boolean;
+    judgePicksCards: boolean;
     groupVote: boolean;
   } | null;
   pass: number; // Time Loop plays the same power more than once
@@ -82,6 +82,8 @@ export interface RoundView {
   deadline: number | null;
   // Anonymous during judging. Authors are only revealed once the round ends.
   entries: EntryView[];
+  // Breaking the Fourth Wall: only the judge sees this. Every other player's hand, to pick from.
+  choosing: { playerId: string; name: string; cards: Card[] }[] | null;
   // Group vote (Breaking the Fourth Wall).
   votedIds: string[];
   myVote: string | null;

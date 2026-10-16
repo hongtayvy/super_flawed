@@ -34,31 +34,29 @@ After editing, run `npm run check-cards` in `server/` (checks duplicates, length
 
 Most draws are a normal power. Occasionally the card drawn is a **Plot Twist**. A twist is its own card: it is revealed on its own (about 5 seconds, `TWIST_REVEAL_MS`), and only then is the **next card drawn** to be the round's power. The twist stays on the table beside the power, never printed on it, and modifies that round for everyone. A round never stacks two twists: if a twist is drawn straight after another, the deck reshuffles and redraws.
 
-There are 19 twists (about 1 round in 6 has one). Where the judge or players make a choice, it is listed.
+There are 17 twists (about 1 round in 6 has one). Some need a minimum number of players and are simply not drawn in smaller rooms.
 
 | Twist | What it does |
 |-------|--------------|
 | **Super Strength** | The round is worth 2 points. |
 | **Mirror Universe** | The judge picks the **least** funny flaw, and it wins. |
-| **Sidekick** | The winner's point is also given to a second player (judge picks; not the winner or judge). |
-| **Villain** | The winner also steals 1 point from a player who has one (judge picks). Does nothing if nobody has points. |
-| **Team Up** | Flaws are randomly paired into one combined flaw ("…And …"). A winning pair both score; an odd one out plays solo. |
-| **Origin Story** | Every flaw needs a one-line backstory (3 to 80 characters). The judge reads both. |
+| **Sidekick** | The winner's point is also given to a second player, **chosen by the winner** (not the judge or themselves). If only one player qualifies, they get it automatically. |
+| **Villain** | The winner also steals 1 point from a player who has one (judge picks; automatic if only one player has points). Does nothing if nobody has points. |
+| **Team Up** *(5+ players)* | Players are randomly paired (one team of 3 when odd) and each team's flaws combine into one flaw. Every member of the winning team scores. |
 | **Time Loop** | The same power is played twice in a row. Each pass has its own winner and scores. |
-| **Sequel Bait** | The next round replays this same power (no twist), with the next judge. |
-| **Civilian Casualty** | After the winner, the judge picks one other flaw (anonymously). Its author loses a point if they have one. |
+| **Sequel Bait** *(4+ players)* | The winner is picked but **kept secret and unscored**. Next round replays the same power with the **same flaws** (the new judge's own flaw sits out), judged by the next judge. Both winners are revealed and scored after the sequel, so nobody learns whose flaw is whose in either round. |
+| **Civilian Casualty** | After the winner, the judge picks one other flaw (anonymously). Its author loses a point if they have one. Automatic if only one other flaw. |
 | **Unmasked** | Authors are shown by name while judging. |
 | **Crossover Event** | A second power is drawn. Flaws must ruin both. |
-| **Retcon** | Everyone's hand is replaced with fresh cards. |
-| **Alternate Timeline** | The winning flaw scores for a *different* player than its author. Nobody scores for their own flaw. |
+| **Flashpoint** | The timeline resets: every deck is reshuffled from scratch (all discards go back in) and everyone is dealt a brand-new hand. |
+| **Alternate Timeline** | After the winner scores, **first place and last place swap points**. Ties for first or last are broken at random. |
 | **Power Outage** | The power is hidden from players while they play. It is revealed at judging (the judge still sees it). |
-| **Nemesis** | The winner scores, and the highest-scoring *other* player loses a point (all tied leaders lose one). |
+| **Arch Nemesis** | The winner scores, and the highest-scoring *other* player loses a point (all tied leaders lose one). |
 | **Multiverse Mixup** | All hands are shuffled together and dealt back out, so you play someone else's cards. |
-| **Breaking the Fourth Wall** | Flaws are played face-up with names, live, and names stay visible while judging. |
-| **Public Service Announcement** | Emergency broadcast: only 20 seconds to play a flaw, whatever the room timer says. |
-| **Narrator Interrupts** | The judge plays a flaw too, mixed in anonymously. The judge can win with it. |
+| **Public Service Announcement** | Emergency broadcast: only **10 seconds** to play a flaw, whatever the room timer says. |
+| **Breaking the Fourth Wall** *(4+ players)* | The judge plays a flaw too (mixed in anonymously) and **the whole group votes**, judge included. You can't vote for your own flaw. Most votes wins. A tie goes to the tied flaw the judge voted for; if the judge voted for neither, the judge chooses between the tied flaws. |
 
-Points never go below 0. Twists never stack: only one per round.
+Points never go below 0. Only one twist per round.
 
 **Wildcard:** one card in the Super Power deck. The judge **types a power of their own** (up to 100 characters), it is shown to everyone, and then play continues normally. If a flaw timer is set and it runs out, the table gets a random power instead.
 
@@ -147,9 +145,10 @@ All game state flows through the server. Actions are acknowledged with `{ ok, er
 | `set-timer` | Host → Server | Set the flaw timer (0, 60 or 90 seconds) |
 | `start-game` | Host → Server | Start once 3 to 8 players are ready |
 | `set-wildcard` | Judge → Server | Type the made-up power on a Wildcard round |
-| `submit-card` | Client → Server | Play a flaw from your hand (with a `note` on Origin Story rounds) |
+| `submit-card` | Client → Server | Play a flaw from your hand |
+| `vote` | Client → Server | Vote for a flaw (Breaking the Fourth Wall) |
 | `pick-winner` | Judge → Server | Pick the winning flaw |
-| `pick-target` | Judge → Server | Resolve a Sidekick or Villain twist |
+| `pick-target` | Judge or winner → Server | Make a twist's follow-up pick (Sidekick: the winner; Villain, Civilian Casualty: the judge) |
 | `play-again` | Host → Server | Return to the lobby after a game |
 | `leave-room` | Client → Server | Leave the room |
 | `update-state` | Server → Client | Your personalised view of the room |

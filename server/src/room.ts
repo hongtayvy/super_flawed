@@ -10,23 +10,19 @@ type DeckEntry = { kind: 'card'; card: PowerCard } | { kind: 'twist'; twist: Twi
 
 interface Submission {
   card: Card;
-  note?: string;
 }
 
 interface Entry {
   id: string; // opaque per-round ID so the judge never sees player IDs
-  authorIds: string[]; // more than one on Team Up
-  scorerIds: string[]; // normally the authors; differs on Alternate Timeline
+  authorIds: string[]; // more than one on Team Up; they all score together
   text: string;
   cards: Card[];
-  note?: string;
 }
 
 interface Award {
   text: string;
-  note?: string;
   authorIds: string[];
-  scorerIds: string[];
+  label?: string; // e.g. "Round 3" when one result lists several rounds
 }
 
 interface Round {
@@ -46,8 +42,15 @@ interface Round {
   entries: Entry[];
   deadline: number | null;
   winningEntryId: string | null;
-  target: { prompt: string; eligibleIds: string[]; pick: 'player' | 'entry' } | null;
-  carried: boolean; // power carried over by Sequel Bait: the wildcard step is already done
+  target: { prompt: string; eligibleIds: string[]; pick: 'player' | 'entry'; chooserId: string } | null;
+  // Group vote (Breaking the Fourth Wall)
+  votes: Map<string, string>; // voter id -> entry id
+  voteSkipped: Set<string>;
+  voteCounts: Map<string, number> | null; // set once the vote is tallied
+  tiebreak: string[] | null; // entries the judge must choose between after a tied vote
+  replay: boolean; // Sequel Bait: this round replays last round's power and flaws
+  // Sequel Bait: last round's winner, picked but not yet scored or revealed.
+  carriedAwards: Award[];
   result: { awards: Award[]; note: string } | null;
 }
 
@@ -66,16 +69,9 @@ const BOT_WILDCARDS = [
   'You can make clouds do whatever you say.',
 ];
 
-const BOT_NOTES = [
-  'Cursed by a very petty wizard.',
-  'Long story. Involves a raccoon.',
-  'Blame the group chat.',
-  'It was a dare. I lost.',
-  'Mercury was in retrograde.',
-];
-
-// Team Up: join two flaws into one ("But A. And B.").
-const combineFlaws = (a: string, b: string) => `${a} And ${b.replace(/^But /, '')}`;
+// Team Up: join flaws into one ("But A. And B.").
+const combineFlaws = (texts: string[]) =>
+  [texts[0], ...texts.slice(1).map((t) => `And ${t.replace(/^But /, '')}`)].join(' ');
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 const pick = <T>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
@@ -95,7 +91,7 @@ export class Room {
   private roundCounter = 0;
   private gameWinnerId: string | null = null;
   // Sequel Bait: the power (and its deck entry) the next round replays.
-  private carry: { power: PowerCard; entry: DeckEntry } | null = null;
+  private carry: { power: PowerCard; entry: DeckEntry; flaws: [string, Card][]; awards: Award[] } | null = null;
 
   private phaseTimers = new Set<NodeJS.Timeout>();
   private graceTimers = new Map<string, NodeJS.Timeout>();
@@ -312,19 +308,23 @@ export class Room {
     this.clearPhaseTimers();
     const judgeId = this.nextJudge();
 
-    // Sequel Bait: replay last round's power. No draw, and no twist this time.
+    // Sequel Bait: replay last round's power and flaws. No draw, and no twist this time.
     // Otherwise a Plot Twist is its own card: if it comes up it is shown alone,
-    // and only then is the next power card drawn.
-    const carried = this.carry;
+    // and only then is the next power card drawn. A twist that needs more players
+    // than are in the room is put back and redrawn.
+    const replay = this.carry;
     this.carry = null;
-    const first = carried ? carried.entry : this.powerDeck.draw()!;
-    const twist = !carried && first.kind === 'twist' ? first.twist : null;
+    const size = this.players.size;
+    const first = replay
+      ? replay.entry
+      : this.drawUntil((e) => e.kind === 'card' || (e.twist.minPlayers ?? 0) <= size);
+    const twist = !replay && first.kind === 'twist' ? first.twist : null;
 
     this.roundCounter += 1;
     this.round = {
       number: this.roundCounter,
       judgeId,
-      power: carried ? carried.power : first.kind === 'card' ? first.card : null,
+      power: replay ? replay.power : first.kind === 'card' ? first.card : null,
       power2: null,
       twist,
       drawn: [first],
@@ -339,12 +339,36 @@ export class Room {
       deadline: null,
       winningEntryId: null,
       target: null,
-      carried: Boolean(carried),
+      votes: new Map(),
+      voteSkipped: new Set(),
+      voteCounts: null,
+      tiebreak: null,
+      replay: Boolean(replay),
+      carriedAwards: replay ? replay.awards : [],
       result: null,
     };
 
-    if (twist) this.beginTwistReveal();
+    if (replay) this.beginReplay(replay.flaws);
+    else if (twist) this.beginTwistReveal();
     else this.beginPower();
+  }
+
+  // The same flaws are judged again, by the new judge. Their own flaw sits this one out.
+  private beginReplay(flaws: [string, Card][]) {
+    const round = this.round!;
+    for (const [playerId, card] of flaws) {
+      if (playerId === round.judgeId) this.flawDeck.discard([card]);
+      else round.submissions.set(playerId, { card });
+    }
+    if (round.submissions.size === 0) {
+      // Nothing to replay: reveal and score last round's hidden winner now.
+      const applied = this.applyCarriedAwards(round);
+      if (applied.length) round.notes.push(`Last round's winner was ${this.names(applied[0].authorIds)}.`);
+      this.beginSubmitting();
+    } else {
+      this.startJudging();
+      this.broadcast();
+    }
   }
 
   private beginTwistReveal() {
@@ -389,18 +413,21 @@ export class Room {
     }
     if (twist?.redeal) this.redealHands(twist.redeal);
 
-    if (round.power!.kind === 'wildcard' && !round.carried) this.beginWildcard();
+    if (round.power!.kind === 'wildcard') this.beginWildcard();
     else this.beginSubmitting();
   }
 
-  // Retcon: everyone gets fresh cards. Multiverse Mixup: hands are pooled and dealt back out.
-  private redealHands(mode: 'fresh' | 'swap') {
-    if (mode === 'fresh') {
+  // Flashpoint: every deck resets and everyone gets new cards.
+  // Multiverse Mixup: hands are pooled and dealt back out.
+  private redealHands(mode: 'reset' | 'swap') {
+    if (mode === 'reset') {
       for (const id of this.players.keys()) {
         this.flawDeck.discard(this.hands.get(id) ?? []);
         this.hands.set(id, []);
-        this.refillHand(id);
       }
+      this.flawDeck.resetAll();
+      this.powerDeck.resetAll();
+      for (const id of this.players.keys()) this.refillHand(id);
       return;
     }
     const sizes = new Map([...this.players.keys()].map((id) => [id, (this.hands.get(id) ?? []).length]));
@@ -467,25 +494,19 @@ export class Room {
     return this.queue.shift()!;
   }
 
-  submit(playerId: string, cardId: string, rawNote?: string): string | null {
+  submit(playerId: string, cardId: string): string | null {
     const round = this.round;
     if (this.phase !== 'submitting' || !round) return 'Not accepting flaws right now.';
     if (playerId === round.judgeId && !round.twist?.judgeSubmits) return 'The judge does not submit a flaw.';
     if (round.skipped.has(playerId)) return 'You were skipped this round.';
     if (round.submissions.has(playerId)) return 'You already submitted a flaw.';
 
-    let note: string | undefined;
-    if (round.twist?.needsNote) {
-      note = String(rawNote ?? '').replace(/\s+/g, ' ').trim();
-      if (note.length < 3 || note.length > 80) return 'Add a short backstory (3 to 80 characters).';
-    }
-
     const hand = this.hands.get(playerId) ?? [];
     const idx = hand.findIndex((c) => c.id === cardId);
     if (idx === -1) return 'That card is not in your hand.';
 
     const [card] = hand.splice(idx, 1);
-    round.submissions.set(playerId, { card, note });
+    round.submissions.set(playerId, { card });
     this.advanceFromSubmitting();
     this.broadcast();
     return null;
@@ -522,48 +543,22 @@ export class Room {
 
   // Turn the submitted flaws into the anonymous entries the judge picks from.
   private buildEntries(round: Round): Entry[] {
-    const twist = round.twist;
     const subs = [...round.submissions];
-    let entries: Entry[];
+    const entry = (authorIds: string[]): Entry => {
+      const cards = authorIds.map((id) => round.submissions.get(id)!.card);
+      return { id: randomUUID().slice(0, 8), authorIds, text: combineFlaws(cards.map((c) => c.text)), cards };
+    };
 
-    if (twist?.teamUp && subs.length >= 2) {
-      // Team Up: pair flaws at random into one combined flaw. An odd one out plays solo.
+    // Team Up: players are paired at random and each team's flaws combine into one.
+    // With an odd number, the last team has three. It needs 4+ flaws to leave a real choice.
+    if (round.twist?.teamUp && subs.length >= 4) {
       const ids = shuffle(subs.map(([id]) => id));
-      entries = [];
-      for (let i = 0; i < ids.length; i += 2) {
-        const a = round.submissions.get(ids[i])!;
-        const bId = ids[i + 1];
-        const b = bId ? round.submissions.get(bId) : undefined;
-        const authorIds = b ? [ids[i], bId] : [ids[i]];
-        entries.push({
-          id: randomUUID().slice(0, 8),
-          authorIds,
-          scorerIds: authorIds,
-          text: b ? combineFlaws(a.card.text, b.card.text) : a.card.text,
-          cards: b ? [a.card, b.card] : [a.card],
-        });
-      }
-    } else {
-      entries = subs.map(([id, s]) => ({
-        id: randomUUID().slice(0, 8),
-        authorIds: [id],
-        scorerIds: [id],
-        text: s.card.text,
-        cards: [s.card],
-        note: s.note,
-      }));
+      const teams: string[][] = [];
+      for (let i = 0; i < ids.length; i += 2) teams.push(ids.slice(i, i + 2));
+      if (teams[teams.length - 1].length === 1) teams[teams.length - 2].push(...teams.pop()!);
+      return shuffle(teams.map(entry));
     }
-
-    if (twist?.shiftPoints && entries.length >= 2) {
-      // Alternate Timeline: each flaw scores for the next player in a shuffled
-      // circle, so nobody ever scores for their own flaw.
-      const circle = shuffle(entries.map((e) => e.authorIds[0]));
-      for (const e of entries) {
-        const at = circle.indexOf(e.authorIds[0]);
-        e.scorerIds = [circle[(at + 1) % circle.length]];
-      }
-    }
-    return shuffle(entries);
+    return shuffle(subs.map(([id]) => entry([id])));
   }
 
   private startJudging() {
@@ -571,9 +566,106 @@ export class Room {
     this.clearPhaseTimers();
     round.entries = this.buildEntries(round);
     round.deadline = null;
+
+    if (round.twist?.groupVote) {
+      if (round.entries.length > 1) return this.beginVoting();
+      // Only one flaw was played: nothing to vote on.
+      return this.resolveWinner(round.entries[0]);
+    }
     this.phase = 'judging';
     this.checkBlockers();
     this.scheduleBots();
+  }
+
+  // ---------- group vote (Breaking the Fourth Wall) ----------
+
+  private beginVoting() {
+    const round = this.round!;
+    this.phase = 'voting';
+    round.votes = new Map();
+    round.voteSkipped = new Set();
+    round.tiebreak = null;
+
+    const seconds = this.settings.timerSeconds;
+    if (seconds > 0) {
+      round.deadline = Date.now() + seconds * 1000;
+      this.later(() => this.onVoteDeadline(), seconds * 1000);
+    }
+    this.checkBlockers();
+    this.scheduleBots();
+    this.broadcast();
+  }
+
+  // Everyone at the table votes, the judge included. You cannot vote for your own flaw.
+  vote(playerId: string, entryId: string): string | null {
+    const round = this.round;
+    if (this.phase !== 'voting' || !round) return 'Not voting right now.';
+    if (!this.players.has(playerId) || round.voteSkipped.has(playerId)) return 'You are not voting this round.';
+    const entry = round.entries.find((e) => e.id === entryId);
+    if (!entry) return 'Unknown flaw.';
+    if (entry.authorIds.includes(playerId)) return 'You cannot vote for your own flaw.';
+
+    round.votes.set(playerId, entryId);
+    this.checkVoteDone();
+    this.broadcast();
+    return null;
+  }
+
+  private pendingVoters(): string[] {
+    const round = this.round;
+    if (!round) return [];
+    return [...this.players.keys()].filter((id) => !round.voteSkipped.has(id) && !round.votes.has(id));
+  }
+
+  private checkVoteDone() {
+    if (this.phase === 'voting' && this.pendingVoters().length === 0) this.tallyVotes();
+  }
+
+  private onVoteDeadline() {
+    const round = this.round;
+    if (this.phase !== 'voting' || !round) return;
+    for (const id of this.pendingVoters()) round.voteSkipped.add(id);
+    this.tallyVotes();
+    this.broadcast();
+  }
+
+  // Most votes wins. A tie goes to the flaw the judge voted for; if the judge voted
+  // for neither, the judge chooses between the tied flaws.
+  private tallyVotes() {
+    const round = this.round!;
+    const counts = new Map(round.entries.map((e) => [e.id, 0]));
+    for (const [voter, entryId] of round.votes) {
+      if (!round.voteSkipped.has(voter)) counts.set(entryId, (counts.get(entryId) ?? 0) + 1);
+    }
+    round.voteCounts = counts;
+    const top = Math.max(...counts.values());
+    const tied = round.entries.filter((e) => counts.get(e.id) === top);
+
+    const summary = `Votes: ${[...counts.values()].sort((a, b) => b - a).join(' - ')}.`;
+    if (tied.length === 1) {
+      round.notes.push(summary);
+      return this.resolveWinner(tied[0]);
+    }
+
+    const judgeVote = round.votes.get(round.judgeId);
+    const byJudge = tied.find((e) => e.id === judgeVote);
+    if (byJudge) {
+      round.notes.push(`${summary} Tie! The judge's vote broke it.`);
+      return this.resolveWinner(byJudge);
+    }
+    if (this.players.get(round.judgeId)?.connected) {
+      round.notes.push(`${summary} Tie!`);
+      round.tiebreak = tied.map((e) => e.id);
+      this.clearPhaseTimers();
+      this.phase = 'judging';
+      round.deadline = null;
+      this.checkBlockers();
+      this.scheduleBots();
+      this.broadcast();
+      return;
+    }
+    round.notes.push(`${summary} Tie, and the judge is away, so one was picked at random.`);
+    this.resolveWinner(pick(tied));
   }
 
   // The judge picks exactly one winner. No ties.
@@ -583,10 +675,20 @@ export class Room {
     if (playerId !== round.judgeId) return 'Only the judge picks the winner.';
     const entry = round.entries.find((e) => e.id === entryId);
     if (!entry) return 'Unknown flaw.';
+    if (round.tiebreak && !round.tiebreak.includes(entryId)) return 'Pick one of the tied flaws.';
+    this.resolveWinner(entry);
+    return null;
+  }
 
-    for (const id of entry.scorerIds) this.players.get(id)!.score += round.roundValue;
+  // Score the winning flaw, then run the twist's follow-up (a pick, or an automatic effect).
+  private resolveWinner(entry: Entry) {
+    const round = this.round!;
+    // Sequel Bait keeps the winner secret (and unscored) until the sequel is over.
+    if (!round.twist?.replayFlaws) {
+      for (const id of entry.authorIds) this.players.get(id)!.score += round.roundValue;
+    }
     round.winningEntryId = entry.id;
-    round.awards.push({ text: entry.text, note: entry.note, authorIds: entry.authorIds, scorerIds: entry.scorerIds });
+    round.awards.push({ text: entry.text, authorIds: entry.authorIds });
 
     // One line per played flaw, so weak cards can be spotted later (win rate per card).
     for (const [authorId, sub] of round.submissions) {
@@ -604,26 +706,35 @@ export class Room {
     const target = round.twist?.target;
     if (target) {
       const eligibleIds = target.eligible(ctx);
-      if (eligibleIds.length > 0) {
+      if (eligibleIds.length === 1) {
+        // Only one possible pick: no need to ask anyone.
+        round.notes.push(target.apply(ctx, eligibleIds[0]));
+      } else if (eligibleIds.length > 1) {
         this.clearPhaseTimers();
-        round.target = { prompt: target.prompt, eligibleIds, pick: target.pick ?? 'player' };
+        round.target = {
+          prompt: target.prompt,
+          eligibleIds,
+          pick: target.pick ?? 'player',
+          chooserId: target.chooser === 'winner' ? entry.authorIds[0] : round.judgeId,
+        };
         this.phase = 'target';
         this.checkBlockers();
         this.scheduleBots();
         this.broadcast();
-        return null;
+        return;
       }
     }
     const auto = round.twist?.afterWinner?.(ctx);
     if (auto) round.notes.push(auto);
     this.completePass();
-    return null;
   }
 
   pickTarget(playerId: string, targetId: string): string | null {
     const round = this.round;
     if (this.phase !== 'target' || !round?.target || !round.twist?.target) return 'No target to pick.';
-    if (playerId !== round.judgeId) return 'Only the judge picks the target.';
+    if (playerId !== round.target.chooserId) {
+      return round.twist.target.chooser === 'winner' ? 'Only the winner picks.' : 'Only the judge picks.';
+    }
     if (!round.target.eligibleIds.includes(targetId)) return 'That one cannot be picked.';
 
     round.notes.push(round.twist.target.apply(this.twistContext(round), targetId));
@@ -634,8 +745,8 @@ export class Room {
   private twistContext(round: Round) {
     const entry = round.entries.find((e) => e.id === round.winningEntryId)!;
     return {
-      winnerId: entry.scorerIds[0],
-      scorerIds: entry.scorerIds,
+      winnerId: entry.authorIds[0],
+      scorerIds: entry.authorIds,
       winningEntryId: entry.id,
       judgeId: round.judgeId,
       roundValue: round.roundValue,
@@ -666,6 +777,14 @@ export class Room {
     this.beginSubmitting();
   }
 
+  // Score and hand over last round's hidden Sequel Bait winners (once).
+  private applyCarriedAwards(round: Round): Award[] {
+    const awards = round.carriedAwards;
+    round.carriedAwards = [];
+    for (const a of awards) for (const id of a.authorIds) this.players.get(id)!.score += 1;
+    return awards;
+  }
+
   private names(ids: string[]) {
     return ids.map((id) => this.players.get(id)?.name ?? '?').join(' & ');
   }
@@ -675,24 +794,44 @@ export class Room {
     const round = this.round!;
     this.clearPhaseTimers();
 
+    // The sequel finishes last round's deferred score too, and reveals both winners.
+    const carried = this.applyCarriedAwards(round);
+    const deferred = Boolean(round.twist?.replayFlaws && round.awards.length > 0);
+
     let headline = note;
-    if (!headline) {
+    let awards: Award[] = round.awards;
+    if (deferred) {
+      // Sequel Bait round: authors stay secret until the sequel is over.
+      awards = [{ text: round.awards[0].text, authorIds: [] }];
+      headline = 'A winning flaw was picked! Who wrote it stays secret until the sequel.';
+    } else if (carried.length) {
+      awards = [
+        ...carried.map((a) => ({ ...a, label: `Round ${round.number - 1}` })),
+        ...round.awards.map((a) => ({ ...a, label: `Round ${round.number}` })),
+      ];
+      headline = awards.map((a) => `${a.label}: ${this.names(a.authorIds)}`).join('. ') + '.';
+    } else if (!headline) {
       headline =
         round.awards.length === 1
-          ? `${this.names(round.awards[0].scorerIds)} win${round.awards[0].scorerIds.length > 1 ? '' : 's'} the round!`
-          : round.awards.map((a, i) => `Pass ${i + 1}: ${this.names(a.scorerIds)}`).join('. ') + '.';
+          ? `${this.names(round.awards[0].authorIds)} win${round.awards[0].authorIds.length > 1 ? '' : 's'} the round!`
+          : round.awards.map((a, i) => `Pass ${i + 1}: ${this.names(a.authorIds)}`).join('. ') + '.';
     }
-    round.result = { awards: round.awards, note: [headline, ...round.notes].join(' ') };
+    round.result = { awards, note: [headline, ...round.notes].join(' ') };
 
-    // Used cards go to the discard piles; hands are topped back up to full.
-    this.flawDeck.discard([...round.submissions.values()].map((s) => s.card));
-
-    if (round.twist?.replayPower && round.power) {
-      // Sequel Bait: keep the power out of the discard so the next round can replay it.
+    const played = [...round.submissions.values()].map((s) => s.card);
+    if (round.twist?.replayFlaws && round.power && round.awards.length > 0) {
+      // Sequel Bait: keep the power and this round's flaws out of the discard so the
+      // next round can replay them.
       const entry = [...round.drawn].reverse().find((d) => d.kind === 'card')!;
-      this.carry = { power: round.power, entry };
+      this.carry = {
+        power: round.power,
+        entry,
+        flaws: [...round.submissions].map(([id, s]): [string, Card] => [id, s.card]),
+        awards: round.awards,
+      };
       this.powerDeck.discard(round.drawn.filter((d) => d !== entry));
     } else {
+      this.flawDeck.discard(played);
       this.powerDeck.discard(round.drawn);
     }
     for (const id of this.players.keys()) this.refillHand(id);
@@ -750,16 +889,20 @@ export class Room {
   private blockers(): Player[] {
     const round = this.round;
     if (!round) return [];
-    if (this.phase === 'submitting') {
-      return this.pendingSubmitters()
-        .map((id) => this.players.get(id)!)
-        .filter((p) => !p.connected);
+    const get = (ids: string[]) => ids.map((id) => this.players.get(id)!).filter((p) => p && !p.connected);
+    switch (this.phase) {
+      case 'submitting':
+        return get(this.pendingSubmitters());
+      case 'voting':
+        return get(this.pendingVoters());
+      case 'target':
+        return get(round.target ? [round.target.chooserId] : []);
+      case 'wildcard':
+      case 'judging':
+        return get([round.judgeId]);
+      default:
+        return [];
     }
-    if (this.phase === 'wildcard' || this.phase === 'judging' || this.phase === 'target') {
-      const judge = this.players.get(round.judgeId);
-      return judge && !judge.connected ? [judge] : [];
-    }
-    return [];
   }
 
   // Wait out the grace period for each missing player, then skip them for this
@@ -789,7 +932,14 @@ export class Room {
     if (this.phase === 'submitting') {
       round.skipped.add(playerId);
       this.advanceFromSubmitting();
-    } else if (this.phase === 'wildcard' || this.phase === 'judging' || this.phase === 'target') {
+    } else if (this.phase === 'voting') {
+      round.voteSkipped.add(playerId);
+      this.checkVoteDone();
+    } else if (this.phase === 'target') {
+      // The person who had to pick is gone: the twist's effect simply does not happen.
+      round.notes.push(`${player.name} was away, so the Plot Twist did nothing.`);
+      this.completePass();
+    } else if (this.phase === 'wildcard' || this.phase === 'judging') {
       this.finishRound(`${player.name} (the judge) disconnected. Round skipped.`);
     }
     this.broadcast();
@@ -801,22 +951,33 @@ export class Room {
     const round = this.round;
     if (!round) return;
     const bots = [...this.players.values()].filter((p) => p.isBot);
+    const judgeIsBot = Boolean(this.players.get(round.judgeId)?.isBot);
 
-    if (this.phase === 'wildcard' && this.players.get(round.judgeId)?.isBot) {
+    if (this.phase === 'wildcard' && judgeIsBot) {
       this.later(() => this.applyWildcard(pick(BOT_WILDCARDS)), rand(1500, 3000));
     } else if (this.phase === 'submitting') {
       for (const bot of bots) {
         if (bot.id === round.judgeId && !round.twist?.judgeSubmits) continue;
         this.later(() => {
           const hand = this.hands.get(bot.id) ?? [];
-          if (hand.length) this.submit(bot.id, pick(hand).id, pick(BOT_NOTES));
+          if (hand.length) this.submit(bot.id, pick(hand).id);
         }, rand(1000, 3500));
       }
-    } else if (this.phase === 'judging' && this.players.get(round.judgeId)?.isBot) {
-      this.later(() => this.pickWinner(round.judgeId, pick(round.entries).id), rand(2500, 4500));
-    } else if (this.phase === 'target' && this.players.get(round.judgeId)?.isBot && round.target) {
-      const ids = round.target.eligibleIds;
-      this.later(() => this.pickTarget(round.judgeId, pick(ids)), rand(1500, 3000));
+    } else if (this.phase === 'voting') {
+      for (const bot of bots) {
+        this.later(() => {
+          const options = round.entries.filter((e) => !e.authorIds.includes(bot.id));
+          if (options.length) this.vote(bot.id, pick(options).id);
+        }, rand(1500, 3500));
+      }
+    } else if (this.phase === 'judging' && judgeIsBot) {
+      const options = round.tiebreak
+        ? round.entries.filter((e) => round.tiebreak!.includes(e.id))
+        : round.entries;
+      this.later(() => this.pickWinner(round.judgeId, pick(options).id), rand(2500, 4500));
+    } else if (this.phase === 'target' && round.target && this.players.get(round.target.chooserId)?.isBot) {
+      const { chooserId, eligibleIds } = round.target;
+      this.later(() => this.pickTarget(chooserId, pick(eligibleIds)), rand(1500, 3000));
     }
   }
 
@@ -861,34 +1022,25 @@ export class Room {
   private roundView(round: Round, viewerId: string): RoundView {
     const twist = round.twist;
     // Authors stay hidden until the round is over, unless the twist says otherwise.
-    const reveal = this.phase === 'roundEnd' || this.phase === 'gameOver';
+    // Sequel Bait keeps authors secret through the round that sets up the sequel too.
+    const secret = Boolean(this.carry && twist?.replayFlaws);
+    const reveal = (this.phase === 'roundEnd' || this.phase === 'gameOver') && !secret;
     const showAuthors = reveal || Boolean(twist?.revealAuthors);
     const showEntries =
-      this.phase === 'judging' || this.phase === 'target' || reveal;
+      this.phase === 'voting' || this.phase === 'judging' || this.phase === 'target' || reveal;
 
     const entries: EntryView[] = showEntries
       ? round.entries.map((e) => ({
           id: e.id,
           text: e.text,
-          note: e.note,
           mine: e.authorIds.includes(viewerId),
           ...(showAuthors
             ? { authorIds: e.authorIds, authorNames: e.authorIds.map((id) => this.players.get(id)?.name ?? '?') }
             : {}),
-          ...(reveal && twist?.shiftPoints ? { scorerIds: e.scorerIds } : {}),
+          // Vote totals are only shown once the vote is over.
+          ...(this.phase !== 'voting' && round.voteCounts ? { votes: round.voteCounts.get(e.id) ?? 0 } : {}),
         }))
       : [];
-
-    // Breaking the Fourth Wall: flaws are face-up, with names, as they are played.
-    const liveFlaws =
-      twist?.liveFlaws && this.phase === 'submitting'
-        ? [...round.submissions].map(([playerId, s]) => ({
-            playerId,
-            playerName: this.players.get(playerId)?.name ?? '?',
-            text: s.card.text,
-            note: s.note,
-          }))
-        : [];
 
     // Power Outage: the power is hidden from players (not the judge) until judging.
     const hidden =
@@ -909,8 +1061,8 @@ export class Room {
             name: twist.name,
             description: twist.description,
             judgingPrompt: twist.judgingPrompt,
-            needsNote: twist.needsNote ?? null,
             judgeSubmits: Boolean(twist.judgeSubmits),
+            groupVote: Boolean(twist.groupVote),
           }
         : null,
       pass: round.pass,
@@ -920,7 +1072,9 @@ export class Room {
       skippedIds: [...round.skipped],
       deadline: round.deadline,
       entries,
-      liveFlaws,
+      votedIds: [...round.votes.keys()].filter((id) => !round.voteSkipped.has(id)),
+      myVote: round.votes.get(viewerId) ?? null,
+      tiebreak: round.tiebreak,
       target: round.target,
       result: round.result,
     };

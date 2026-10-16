@@ -2,8 +2,8 @@
 // only reads the generic fields below and has no per-twist logic of its own.
 
 export interface TwistContext {
-  winnerId: string; // first scorer of the winning flaw
-  scorerIds: string[];
+  winnerId: string; // first author of the winning flaw
+  scorerIds: string[]; // everyone who scored for the winning flaw
   winningEntryId: string;
   judgeId: string;
   roundValue: number;
@@ -13,7 +13,9 @@ export interface TwistContext {
 }
 
 export interface TwistTarget {
-  // Who the judge picks: a player by name, or an (anonymous) flaw.
+  // Who makes the follow-up pick: the judge (default) or the round's winner.
+  chooser?: 'judge' | 'winner';
+  // What is picked: a player by name, or an (anonymous) flaw.
   pick?: 'player' | 'entry';
   prompt: string;
   eligible: (ctx: TwistContext) => string[];
@@ -27,28 +29,28 @@ export interface TwistDef {
   description: string;
   // Copies in the Super Power deck: higher means it shows up more often. Defaults to 1.
   weight?: number;
+  // Fewest players in the room for this twist to be drawn. It is reshuffled back otherwise.
+  minPlayers?: number;
 
   // --- scoring ---
   roundValue?: number; // points per win (default 1)
   passes?: number; // the round is played this many times in a row, each with its own winner
-  target?: TwistTarget; // judge picks a follow-up target after the winner
+  target?: TwistTarget; // a follow-up pick after the winner
   afterWinner?: (ctx: TwistContext) => string | null; // automatic effect once the winner is scored
-  shiftPoints?: boolean; // the point goes to a different player than the flaw's author
 
   // --- what players see and play ---
   judgingPrompt?: string; // replaces the judge's default prompt
   hidePower?: boolean; // the power stays hidden from players until judging
   extraPower?: boolean; // a second power is drawn and flaws must ruin both
   revealAuthors?: boolean; // authors are shown by name while judging
-  liveFlaws?: boolean; // flaws are shown face-up, with names, as they are played
-  needsNote?: string; // each flaw needs a short written note (this is the prompt)
-  teamUp?: boolean; // flaws are paired into combined entries
+  teamUp?: boolean; // flaws are grouped into combined entries of 2 (one of 3 when odd)
   judgeSubmits?: boolean; // the judge also plays a flaw, mixed in anonymously
+  groupVote?: boolean; // the whole table votes for the winner (judge breaks ties)
 
   // --- setup ---
-  redeal?: 'fresh' | 'swap'; // fresh cards for everyone, or all hands shuffled and dealt back out
+  redeal?: 'reset' | 'swap'; // reset every deck and deal new hands, or shuffle all hands and deal them back out
   submitSeconds?: number; // forced time limit for playing a flaw, whatever the room timer says
-  replayPower?: boolean; // the next round replays this same power
+  replayFlaws?: boolean; // the next round replays this power with these same flaws
 }
 
 const find = (ctx: TwistContext, id: string) => ctx.players.find((p) => p.id === id)!;
@@ -69,8 +71,9 @@ export const TWISTS: TwistDef[] = [
   {
     id: 'sidekick',
     name: 'Sidekick',
-    description: "The winner's point is also given to another player, chosen by the judge.",
+    description: "The winner's point is also given to another player, chosen by the winner.",
     target: {
+      chooser: 'winner',
       prompt: 'Sidekick: who also gets the point?',
       eligible: (ctx) =>
         ctx.players.filter((p) => !ctx.scorerIds.includes(p.id) && p.id !== ctx.judgeId).map((p) => p.id),
@@ -100,14 +103,9 @@ export const TWISTS: TwistDef[] = [
   {
     id: 'team_up',
     name: 'Team Up',
-    description: 'Flaws are paired up into one combined flaw. A winning pair both score.',
+    description: 'Players are paired up and their flaws combine into one. A winning team all score.',
     teamUp: true,
-  },
-  {
-    id: 'origin_story',
-    name: 'Origin Story',
-    description: 'Add a one-line backstory to your flaw. The judge reads both.',
-    needsNote: 'How did you get this flaw? (one line)',
+    minPlayers: 5,
   },
   {
     id: 'time_loop',
@@ -118,8 +116,9 @@ export const TWISTS: TwistDef[] = [
   {
     id: 'sequel_bait',
     name: 'Sequel Bait',
-    description: 'There will be a sequel: the next round replays this same power.',
-    replayPower: true,
+    description: "There will be a sequel: this round's flaws come back next round, judged again by the next judge.",
+    replayFlaws: true,
+    minPlayers: 4,
   },
   {
     id: 'civilian_casualty',
@@ -155,16 +154,31 @@ export const TWISTS: TwistDef[] = [
     judgingPrompt: 'Crossover Event: which flaw ruins BOTH powers best?',
   },
   {
-    id: 'retcon',
-    name: 'Retcon',
-    description: 'Everyone\'s hand never happened. All hands are replaced with fresh cards.',
-    redeal: 'fresh',
+    id: 'flashpoint',
+    name: 'Flashpoint',
+    description: 'The timeline resets! Every deck is reshuffled from scratch and everyone gets a brand-new hand.',
+    redeal: 'reset',
   },
   {
     id: 'alternate_timeline',
     name: 'Alternate Timeline',
-    description: 'Points are swapped. The winning flaw scores for a different player than its author.',
-    shiftPoints: true,
+    description: 'After the winner scores, first place and last place swap points.',
+    afterWinner: (ctx) => {
+      const scores = ctx.players.map((p) => p.score);
+      const hi = Math.max(...scores);
+      const lo = Math.min(...scores);
+      if (hi === lo) return 'Alternate Timeline: everyone is tied, so nothing changes.';
+      // Ties for first or last are broken at random.
+      const pickOf = (value: number) => {
+        const tied = ctx.players.filter((p) => p.score === value);
+        return tied[Math.floor(Math.random() * tied.length)];
+      };
+      const first = pickOf(hi);
+      const last = pickOf(lo);
+      first.score = lo;
+      last.score = hi;
+      return `Alternate Timeline: ${first.name} (first, ${hi}) and ${last.name} (last, ${lo}) swapped points!`;
+    },
   },
   {
     id: 'power_outage',
@@ -173,41 +187,37 @@ export const TWISTS: TwistDef[] = [
     hidePower: true,
   },
   {
-    id: 'nemesis',
-    name: 'Nemesis',
+    id: 'arch_nemesis',
+    name: 'Arch Nemesis',
     description: 'The winner scores, and the highest-scoring other player loses a point.',
     afterWinner: (ctx) => {
       const others = ctx.players.filter((p) => !ctx.scorerIds.includes(p.id));
       const top = Math.max(0, ...others.map((p) => p.score));
-      if (top <= 0) return 'The nemesis has no points to lose yet.';
+      if (top <= 0) return 'The arch nemesis has no points to lose yet.';
       const rivals = others.filter((p) => p.score === top);
       for (const r of rivals) r.score -= 1;
-      return `Nemesis: ${rivals.map((r) => r.name).join(' & ')} lost a point.`;
+      return `Arch Nemesis: ${rivals.map((r) => r.name).join(' & ')} lost a point.`;
     },
   },
   {
     id: 'multiverse_mixup',
     name: 'Multiverse Mixup',
-    description: 'All hands are shuffled together and dealt back out. You play someone else\'s cards.',
+    description: "All hands are shuffled together and dealt back out. You play someone else's cards.",
     redeal: 'swap',
-  },
-  {
-    id: 'fourth_wall',
-    name: 'Breaking the Fourth Wall',
-    description: 'Flaws are played face-up with names. Everyone watches them roll in live.',
-    liveFlaws: true,
-    revealAuthors: true,
   },
   {
     id: 'psa',
     name: 'Public Service Announcement',
-    description: 'Emergency broadcast! You only have 20 seconds to play a flaw.',
-    submitSeconds: 20,
+    description: 'Emergency broadcast! You only have 10 seconds to play a flaw.',
+    submitSeconds: 10,
   },
   {
-    id: 'narrator_interrupts',
-    name: 'Narrator Interrupts',
-    description: 'The judge plays a flaw too, mixed in anonymously. The judge can win!',
+    id: 'fourth_wall',
+    name: 'Breaking the Fourth Wall',
+    description:
+      'The judge plays a flaw too, and the whole group votes. Most votes wins. Ties go to the flaw the judge voted for.',
     judgeSubmits: true,
+    groupVote: true,
+    minPlayers: 4,
   },
 ];

@@ -11,7 +11,7 @@ import type { EntryView, RoomState } from '../../types/game';
 const WILDCARD_EXAMPLES = ['You can sneeze lightning.', 'You can talk to sandwiches.', 'You can pause any song forever.'];
 
 const GameBoard = ({ state }: { state: RoomState }) => {
-  const { pickWinner, pickTarget, playAgain, setWildcard } = useGame();
+  const { pickWinner, pickTarget, playAgain, setWildcard, vote } = useGame();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [wildcardText, setWildcardText] = useState('');
@@ -56,7 +56,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
   );
 
   // One flaw card, with its backstory, author line and "yours" badge.
-  const entryCard = (entry: EntryView, onClick?: () => void) => (
+  const entryCard = (entry: EntryView, onClick?: () => void, chosen = false) => (
     <motion.div
       key={entry.id}
       initial={{ opacity: 0, y: 20 }}
@@ -64,15 +64,15 @@ const GameBoard = ({ state }: { state: RoomState }) => {
       onClick={onClick}
       className={`relative ${onClick ? 'cursor-pointer' : ''}`}
     >
-      <WhiteCard text={entry.text} isSelectable={Boolean(onClick)} isSelected={entry.mine} />
-      {entry.note && (
-        <p className="mt-2 rounded-xl border-2 border-ink bg-lilac px-3 py-2 text-sm font-bold">
-          📖 {entry.note}
-        </p>
-      )}
+      <WhiteCard text={entry.text} isSelectable={Boolean(onClick)} isSelected={entry.mine || chosen} />
       {entry.authorNames && (
         <p className="mt-1 text-center text-xs font-black uppercase tracking-wide text-muted">
           by {entry.authorNames.join(' & ')}
+        </p>
+      )}
+      {entry.votes !== undefined && (
+        <p className="mt-1 text-center text-sm font-black">
+          {entry.votes} vote{entry.votes === 1 ? '' : 's'}
         </p>
       )}
       {entry.mine && (
@@ -146,7 +146,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
               ) : iSubmitted ? (
                 <p>Flaw locked in! Waiting for the others... ({round.submittedIds.length}/{submitters.length})</p>
               ) : isJudge ? (
-                <p>The Narrator interrupts! Play a flaw of your own. It gets mixed in anonymously.</p>
+                <p>Breaking the Fourth Wall! Play a flaw of your own. It's mixed in anonymously, and the group votes.</p>
               ) : (
                 <p>
                   {round.power2
@@ -160,47 +160,56 @@ const GameBoard = ({ state }: { state: RoomState }) => {
                 </p>
               )}
             </div>
-            {round.liveFlaws.length > 0 && (
-              <div className="w-full max-w-3xl">
-                <p className="mb-2 text-center text-xs font-black uppercase tracking-widest text-muted">
-                  Played so far (face-up)
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {round.liveFlaws.map((f) => (
-                    <div key={f.playerId} className="rounded-2xl border-[3px] border-ink bg-white p-3 shadow-pop-sm">
-                      <p className="text-xs font-black uppercase tracking-wide text-muted">{f.playerName}</p>
-                      <p className="font-black">{f.text}</p>
-                      {f.note && <p className="text-sm font-bold">📖 {f.note}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         );
       }
 
-      case 'judging':
+      case 'voting':
+        return (
+          <>
+            {cards}
+            <p className="text-2xl font-black text-center max-w-xl">
+              Vote for the funniest flaw! ({round.votedIds.length}/{state.players.length} voted)
+            </p>
+            <p className="text-sm font-bold text-muted">
+              {round.myVote ? 'Vote cast. Tap another flaw to change it.' : 'You can\'t vote for your own flaw.'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl">
+              {round.entries.map((entry) =>
+                entryCard(entry, entry.mine ? undefined : () => act(() => vote(entry.id)), entry.id === round.myVote),
+              )}
+            </div>
+          </>
+        );
+
+      case 'judging': {
+        // After a tied group vote the judge chooses between the tied flaws only.
+        const options = round.tiebreak ? round.entries.filter((e) => round.tiebreak!.includes(e.id)) : round.entries;
         return (
           <>
             {passBadge}
             {cards}
             <p className="text-2xl font-black text-center max-w-xl">
-              {isJudge
-                ? (round.twist?.judgingPrompt ?? 'Which flaw ruins it best?')
-                : 'The judge is deciding who ruined it best...'}
+              {round.tiebreak
+                ? isJudge
+                  ? 'It is a tie! You break it: pick the winner.'
+                  : 'It is a tie! The judge breaks it...'
+                : isJudge
+                  ? (round.twist?.judgingPrompt ?? 'Which flaw ruins it best?')
+                  : 'The judge is deciding who ruined it best...'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl">
-              {round.entries.map((entry) => entryCard(entry, isJudge ? () => act(() => pickWinner(entry.id)) : undefined))}
+              {options.map((entry) => entryCard(entry, isJudge ? () => act(() => pickWinner(entry.id)) : undefined))}
             </div>
           </>
         );
+      }
 
       case 'target':
         return (
           <>
             {cards}
-            {isJudge && round.target ? (
+            {round.target && round.target.chooserId === state.you ? (
               <div className="w-full max-w-4xl text-center">
                 <p className="text-2xl font-black mb-4">{round.target.prompt}</p>
                 {round.target.pick === 'entry' ? (
@@ -220,7 +229,9 @@ const GameBoard = ({ state }: { state: RoomState }) => {
                 )}
               </div>
             ) : (
-              <p className="text-2xl font-black text-center">The judge is resolving the Plot Twist...</p>
+              <p className="text-2xl font-black text-center">
+                {round.target ? nameOf(round.target.chooserId) : 'Someone'} is resolving the Plot Twist...
+              </p>
             )}
           </>
         );
@@ -235,20 +246,28 @@ const GameBoard = ({ state }: { state: RoomState }) => {
               {result?.awards.map((award, i) => (
                 <div key={i} className="space-y-2">
                   <h3 className="display text-4xl">
-                    {result.awards.length > 1 ? `Pass ${i + 1}: ` : ''}Power ruined by {namesOf(award.scorerIds)}!
+                    {award.label ? `${award.label}: ` : result.awards.length > 1 ? `Pass ${i + 1}: ` : ''}
+                    {award.authorIds.length ? `Power ruined by ${namesOf(award.authorIds)}!` : 'A winning flaw was picked!'}
                   </h3>
                   <div className="inline-block">
                     <WhiteCard text={award.text} isWinner />
                   </div>
-                  {award.note && <p className="font-bold">📖 {award.note}</p>}
-                  {award.authorIds.join() !== award.scorerIds.join() && (
-                    <p className="text-sm font-black uppercase tracking-wide text-muted">
-                      Written by {namesOf(award.authorIds)}
-                    </p>
-                  )}
                 </div>
               ))}
               {result?.note && <p className="text-lg font-black">{result.note}</p>}
+              {round.entries.some((e) => e.votes !== undefined) && (
+                <div className="mx-auto max-w-md rounded-2xl border-[3px] border-ink bg-white p-3 text-left shadow-pop-sm">
+                  <p className="mb-1 text-xs font-black uppercase tracking-widest text-muted">Vote results</p>
+                  {[...round.entries]
+                    .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
+                    .map((e) => (
+                      <p key={e.id} className="flex justify-between gap-3 text-sm font-bold">
+                        <span className="truncate">{e.text}</span>
+                        <span className="shrink-0 font-black">{e.votes}</span>
+                      </p>
+                    ))}
+                </div>
+              )}
               <p className="text-lg font-black text-muted">Next superpower incoming...</p>
             </div>
           </>

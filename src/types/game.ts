@@ -10,7 +10,7 @@ export interface PowerCard extends Card {
   kind: PowerKind;
 }
 
-export type Phase = 'lobby' | 'twist' | 'wildcard' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
+export type Phase = 'lobby' | 'twist' | 'wildcard' | 'submitting' | 'voting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
 
 // What a client is allowed to see. Never includes other players' hands or
 // the authors of flaws before judging is over.
@@ -40,12 +40,11 @@ export interface RoomState {
 export interface EntryView {
   id: string;
   text: string;
-  note?: string; // Origin Story backstory
   mine: boolean;
   // Present only once authors may be seen (after judging, or on Unmasked rounds).
   authorIds?: string[];
   authorNames?: string[];
-  scorerIds?: string[]; // who actually scores, when that differs (Alternate Timeline)
+  votes?: number; // shown once a group vote is over
 }
 
 export interface RoundView {
@@ -59,8 +58,8 @@ export interface RoundView {
     name: string;
     description: string;
     judgingPrompt?: string;
-    needsNote: string | null;
     judgeSubmits: boolean;
+    groupVote: boolean;
   } | null;
   pass: number; // Time Loop plays the same power more than once
   passes: number;
@@ -70,8 +69,11 @@ export interface RoundView {
   deadline: number | null;
   // Anonymous during judging. Authors are only revealed once the round ends.
   entries: EntryView[];
-  // Flaws shown face-up as they are played (Breaking the Fourth Wall).
-  liveFlaws: { playerId: string; playerName: string; text: string; note?: string }[];
-  target: { prompt: string; eligibleIds: string[]; pick: 'player' | 'entry' } | null;
-  result: { awards: { text: string; note?: string; authorIds: string[]; scorerIds: string[] }[]; note: string } | null;
+  // Group vote (Breaking the Fourth Wall).
+  votedIds: string[];
+  myVote: string | null;
+  tiebreak: string[] | null; // entry ids the judge must choose between after a tied vote
+  target: { prompt: string; eligibleIds: string[]; pick: 'player' | 'entry'; chooserId: string } | null;
+  // authorIds is empty while a winner is kept secret (Sequel Bait, until the sequel is over).
+  result: { awards: { text: string; authorIds: string[]; label?: string }[]; note: string } | null;
 }

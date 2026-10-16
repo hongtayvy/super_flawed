@@ -5,6 +5,7 @@ const PHASE_LABELS: Record<string, string> = {
   twist: 'Plot Twist',
   wildcard: 'Wildcard',
   submitting: 'Writing phase',
+  voting: 'Group vote',
   judging: 'Judging',
   target: 'Twist effect',
   roundEnd: 'Round complete',

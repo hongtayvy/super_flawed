@@ -160,7 +160,7 @@ All game state flows through the server. Actions are acknowledged with `{ ok, er
 
 ## 🧱 Roadmap
 
-- [ ] More Plot Twists (Time Loop, Origin Story, Narrator Interrupts and others)
+- [ ] More Plot Twists (ideas welcome; Origin Story was cut and could be reworked)
 - [ ] Public matchmaking
 - [ ] Leaderboards and match history
 - [ ] Card pack editor (custom powers and flaws)

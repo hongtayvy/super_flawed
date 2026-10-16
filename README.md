@@ -77,7 +77,7 @@ Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts): an id, 
 | Styling  | Tailwind CSS 4                              |
 | Backend  | Node.js + Express                           |
 | Realtime | Socket.IO                                   |
-| Hosting  | Cloudflare Workers (client), Render (server) |
+| Hosting  | Cloudflare Pages (client), Render (server)   |
 
 ## 📁 Project structure
 
@@ -100,7 +100,6 @@ super-flawed/
 │       ├── deck.ts        # Shuffle and reshuffle-on-empty deck
 │       └── config.ts      # Rules and timing
 ├── render.yaml            # Render blueprint for the server
-├── wrangler.jsonc         # Cloudflare deploy config for the client
 └── README.md
 ```
 
@@ -156,7 +155,7 @@ All game state flows through the server. Actions are acknowledged with `{ ok, er
 ## 🚀 Deploying
 
 - **Server:** Render web service from `server/` (see `render.yaml`). Build `npm install --include=dev && npm run build`, start `node dist/index.js`.
-- **Client:** `npm run build && npx wrangler deploy` from the repo root. Add the deployed origin to `allowedOrigins` in `server/src/index.ts`.
+- **Client:** Cloudflare Pages is connected to this repo and deploys automatically when `main` changes (build command `npm run build`, output directory `dist`). `superflawed.com` and `www.superflawed.com` are Pages custom domains. Any new client origin must be added to `allowedOrigins` in `server/src/index.ts`.
 
 ## 🧱 Roadmap
 

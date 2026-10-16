@@ -53,8 +53,8 @@ There are 17 twists (about 1 round in 6 has one). Some need a minimum number of 
 | **Power Outage** | The power is hidden from players while they play. It is revealed at judging (the judge still sees it). |
 | **Arch Nemesis** | The winner scores, and the highest-scoring *other* player loses a point (all tied leaders lose one). |
 | **Multiverse Mixup** | All hands are shuffled together and dealt back out, so you play someone else's cards. |
-| **Public Service Announcement** | Emergency broadcast: only **10 seconds** to play a flaw, whatever the room timer says. |
-| **Breaking the Fourth Wall** *(4+ players)* | The judge plays a flaw too (mixed in anonymously) and **the whole group votes**, judge included. You can't vote for your own flaw. Most votes wins. A tie goes to the tied flaw the judge voted for; if the judge voted for neither, the judge chooses between the tied flaws. |
+| **Public Service Announcement** | Emergency broadcast: only **20 seconds** to play a flaw, whatever the room timer says. |
+| **Breaking the Fourth Wall** *(4+ players)* | The judge plays a flaw too (mixed in anonymously) and **the whole group votes**, judge included. You can't vote for your own flaw. Most votes wins. **If there is a tie, the judge picks** between the tied flaws. |
 
 Points never go below 0. Only one twist per round.
 

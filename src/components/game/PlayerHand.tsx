@@ -16,7 +16,7 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
   const isJudge = round.judgeId === state.you;
   const hasSubmitted = round.submittedIds.includes(state.you);
   const wasSkipped = round.skippedIds.includes(state.you);
-  // Narrator Interrupts lets the judge play a flaw too.
+  // Breaking the Fourth Wall lets the judge play a flaw too.
   const judgePlays = Boolean(round.twist?.judgeSubmits);
   const canPlay =
     state.phase === 'submitting' && (!isJudge || judgePlays) && !hasSubmitted && !wasSkipped;

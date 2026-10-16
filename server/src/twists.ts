@@ -55,8 +55,8 @@ const find = (ctx: TwistContext, id: string) => ctx.players.find((p) => p.id ===
 
 export const TWISTS: TwistDef[] = [
   {
-    id: 'double_jeopardy',
-    name: 'Double Jeopardy',
+    id: 'super_strength',
+    name: 'Super Strength',
     description: 'This round is worth 2 points.',
     roundValue: 2,
   },

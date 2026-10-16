@@ -38,7 +38,7 @@ There are 19 twists (about 1 round in 6 has one). Where the judge or players mak
 
 | Twist | What it does |
 |-------|--------------|
-| **Double Jeopardy** | The round is worth 2 points. |
+| **Super Strength** | The round is worth 2 points. |
 | **Mirror Universe** | The judge picks the **least** funny flaw, and it wins. |
 | **Sidekick** | The winner's point is also given to a second player (judge picks; not the winner or judge). |
 | **Villain** | The winner also steals 1 point from a player who has one (judge picks). Does nothing if nobody has points. |

@@ -14,6 +14,8 @@ const allowedOrigins = [
   'https://6880424d6dd5960008c088c6--superflawed.netlify.app', // Netlify preview
   'http://localhost:5173', // dev
   'https://super-flawed.victor-yang.workers.dev', // Cloudflare
+  'https://superflawed.com',
+  'https://www.superflawed.com',
 ];
 
 app.use(cors({ origin: allowedOrigins }));

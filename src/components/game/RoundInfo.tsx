@@ -5,6 +5,7 @@ const PHASE_LABELS: Record<string, string> = {
   twist: 'Plot Twist',
   wildcard: 'Wildcard',
   submitting: 'Writing phase',
+  voting: 'Group vote',
   judging: 'Judging',
   target: 'Twist effect',
   roundEnd: 'Round complete',
@@ -21,7 +22,10 @@ const RoundInfo = ({ state }: { state: RoomState }) => {
       <div className="flex items-center gap-6">
         <div>
           <span className="text-[10px] font-black uppercase tracking-widest text-muted">Round</span>
-          <div className="display text-2xl">{round.number}</div>
+          <div className="display text-2xl">
+            {round.number}
+            {round.passes > 1 && <span className="text-base text-muted"> · pass {round.pass}/{round.passes}</span>}
+          </div>
         </div>
         <div>
           <span className="text-[10px] font-black uppercase tracking-widest text-muted">Judge</span>

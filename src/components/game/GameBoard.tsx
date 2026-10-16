@@ -6,12 +6,12 @@ import TwistCard from '../cards/TwistCard';
 import Button from '../ui/Button';
 import { useGame } from '../../contexts/GameContext';
 import { useToast } from '../../hooks/useToast';
-import type { RoomState } from '../../types/game';
+import type { EntryView, RoomState } from '../../types/game';
 
 const WILDCARD_EXAMPLES = ['You can sneeze lightning.', 'You can talk to sandwiches.', 'You can pause any song forever.'];
 
 const GameBoard = ({ state }: { state: RoomState }) => {
-  const { pickWinner, pickTarget, playAgain, setWildcard } = useGame();
+  const { pickWinner, pickTarget, playAgain, setWildcard, vote } = useGame();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [wildcardText, setWildcardText] = useState('');
@@ -20,7 +20,11 @@ const GameBoard = ({ state }: { state: RoomState }) => {
   const me = state.players.find((p) => p.id === state.you);
   const isJudge = round.judgeId === state.you;
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '?';
-  const submitters = state.players.filter((p) => p.id !== round.judgeId && !round.skippedIds.includes(p.id));
+  const namesOf = (ids: string[]) => ids.map(nameOf).join(' & ');
+  const judgePlays = Boolean(round.twist?.judgeSubmits);
+  const submitters = state.players.filter(
+    (p) => (p.id !== round.judgeId || judgePlays) && !round.skippedIds.includes(p.id),
+  );
 
   const act = async (run: () => Promise<{ ok: boolean; error?: string }>) => {
     if (busy) return;
@@ -31,20 +35,52 @@ const GameBoard = ({ state }: { state: RoomState }) => {
   };
 
   // The twist (if any) sits beside the power as a separate card; it is never printed on it.
-  const powerCard = round.power && (
-    <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />
-  );
   const cards = (
     <div className="flex flex-wrap items-center justify-center gap-8">
       {round.twist && <TwistCard name={round.twist.name} description={round.twist.description} />}
-      {powerCard}
+      {round.power && <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />}
+      {round.power2 && <BlackCard text={round.power2.text} isWildcard={false} />}
     </div>
+  );
+
+  const passBadge = round.passes > 1 && (
+    <span className="pill bg-lilac">
+      🔁 Pass {round.pass} of {round.passes}
+    </span>
   );
 
   const wildcardNote = round.power?.kind === 'wildcard' && state.phase !== 'wildcard' && (
     <p className="max-w-md text-center text-sm font-bold text-muted">
       {nameOf(round.judgeId)} made up this power. Play the flaw that ruins it.
     </p>
+  );
+
+  // One flaw card, with its backstory, author line and "yours" badge.
+  const entryCard = (entry: EntryView, onClick?: () => void, chosen = false) => (
+    <motion.div
+      key={entry.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      onClick={onClick}
+      className={`relative ${onClick ? 'cursor-pointer' : ''}`}
+    >
+      <WhiteCard text={entry.text} isSelectable={Boolean(onClick)} isSelected={entry.mine || chosen} />
+      {entry.authorNames && (
+        <p className="mt-1 text-center text-xs font-black uppercase tracking-wide text-muted">
+          by {entry.authorNames.join(' & ')}
+        </p>
+      )}
+      {entry.votes !== undefined && (
+        <p className="mt-1 text-center text-sm font-black">
+          {entry.votes} vote{entry.votes === 1 ? '' : 's'}
+        </p>
+      )}
+      {entry.mine && (
+        <span className="absolute -top-2 -right-2 bg-cobalt text-white text-[10px] font-black uppercase px-2 py-1 rounded-full border-2 border-ink">
+          Yours
+        </span>
+      )}
+    </motion.div>
   );
 
   const renderContent = () => {
@@ -88,9 +124,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
                 </Button>
               </form>
             ) : (
-              <p className="text-2xl font-black text-center">
-                {nameOf(round.judgeId)} is inventing a power...
-              </p>
+              <p className="text-2xl font-black text-center">{nameOf(round.judgeId)} is inventing a power...</p>
             )}
           </>
         );
@@ -98,19 +132,27 @@ const GameBoard = ({ state }: { state: RoomState }) => {
       case 'submitting': {
         const iSubmitted = round.submittedIds.includes(state.you);
         const iWasSkipped = round.skippedIds.includes(state.you);
+        const iPlay = !isJudge || judgePlays;
         return (
           <>
+            {passBadge}
             {cards}
             {wildcardNote}
             <div className="text-center font-black text-xl">
-              {isJudge ? (
+              {!iPlay ? (
                 <p>You're the judge! Waiting for flaws... ({round.submittedIds.length}/{submitters.length})</p>
               ) : iWasSkipped ? (
                 <p>You were skipped this round. See you next one!</p>
               ) : iSubmitted ? (
                 <p>Flaw locked in! Waiting for the others... ({round.submittedIds.length}/{submitters.length})</p>
+              ) : isJudge ? (
+                <p>Breaking the Fourth Wall! Play a flaw of your own. It's mixed in anonymously, and the group votes.</p>
               ) : (
-                <p>Pick the flaw from your hand that ruins this power best.</p>
+                <p>
+                  {round.power2
+                    ? 'Pick a flaw that ruins BOTH powers.'
+                    : 'Pick the flaw from your hand that ruins this power best.'}
+                </p>
               )}
               {round.skippedIds.length > 0 && (
                 <p className="text-sm text-muted mt-1">
@@ -122,54 +164,74 @@ const GameBoard = ({ state }: { state: RoomState }) => {
         );
       }
 
-      case 'judging':
+      case 'voting':
         return (
           <>
             {cards}
             <p className="text-2xl font-black text-center max-w-xl">
-              {isJudge
-                ? (round.twist?.judgingPrompt ?? 'Which flaw ruins it best?')
-                : 'The judge is deciding who ruined it best...'}
+              Vote for the funniest flaw! ({round.votedIds.length}/{state.players.length} voted)
+            </p>
+            <p className="text-sm font-bold text-muted">
+              {round.myVote ? 'Vote cast. Tap another flaw to change it.' : 'You can\'t vote for your own flaw.'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl">
-              {round.entries.map((entry, index) => (
-                <motion.div
-                  key={entry.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  onClick={() => isJudge && act(() => pickWinner(entry.id))}
-                  className={`relative ${isJudge ? 'cursor-pointer' : ''}`}
-                >
-                  <WhiteCard text={entry.text} isSelectable={isJudge} isSelected={entry.mine} />
-                  {entry.mine && (
-                    <span className="absolute -top-2 -right-2 bg-cobalt text-white text-[10px] font-black uppercase px-2 py-1 rounded-full border-2 border-ink">
-                      Yours
-                    </span>
-                  )}
-                </motion.div>
-              ))}
+              {round.entries.map((entry) =>
+                entryCard(entry, entry.mine ? undefined : () => act(() => vote(entry.id)), entry.id === round.myVote),
+              )}
             </div>
           </>
         );
+
+      case 'judging': {
+        // After a tied group vote the judge chooses between the tied flaws only.
+        const options = round.tiebreak ? round.entries.filter((e) => round.tiebreak!.includes(e.id)) : round.entries;
+        return (
+          <>
+            {passBadge}
+            {cards}
+            <p className="text-2xl font-black text-center max-w-xl">
+              {round.tiebreak
+                ? isJudge
+                  ? 'It is a tie! You break it: pick the winner.'
+                  : 'It is a tie! The judge breaks it...'
+                : isJudge
+                  ? (round.twist?.judgingPrompt ?? 'Which flaw ruins it best?')
+                  : 'The judge is deciding who ruined it best...'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl">
+              {options.map((entry) => entryCard(entry, isJudge ? () => act(() => pickWinner(entry.id)) : undefined))}
+            </div>
+          </>
+        );
+      }
 
       case 'target':
         return (
           <>
             {cards}
-            {isJudge && round.target ? (
-              <div className="text-center">
+            {round.target && round.target.chooserId === state.you ? (
+              <div className="w-full max-w-4xl text-center">
                 <p className="text-2xl font-black mb-4">{round.target.prompt}</p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  {round.target.eligibleIds.map((id) => (
-                    <Button key={id} variant="secondary" disabled={busy} onClick={() => act(() => pickTarget(id))}>
-                      {nameOf(id)}
-                    </Button>
-                  ))}
-                </div>
+                {round.target.pick === 'entry' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {round.entries
+                      .filter((e) => round.target!.eligibleIds.includes(e.id))
+                      .map((e) => entryCard(e, () => act(() => pickTarget(e.id))))}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {round.target.eligibleIds.map((id) => (
+                      <Button key={id} variant="secondary" disabled={busy} onClick={() => act(() => pickTarget(id))}>
+                        {nameOf(id)}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-2xl font-black text-center">The judge is resolving the Plot Twist...</p>
+              <p className="text-2xl font-black text-center">
+                {round.target ? nameOf(round.target.chooserId) : 'Someone'} is resolving the Plot Twist...
+              </p>
             )}
           </>
         );
@@ -179,17 +241,34 @@ const GameBoard = ({ state }: { state: RoomState }) => {
         return (
           <>
             {cards}
-            <div className="text-center">
-              <h3 className="display text-4xl mb-3">
-                {result?.winnerId ? `Power ruined by ${nameOf(result.winnerId)}!` : 'No winner this round'}
-              </h3>
-              {result?.winnerText && (
-                <div className="inline-block mb-3">
-                  <WhiteCard text={result.winnerText} isWinner />
+            <div className="text-center space-y-4">
+              {result && result.awards.length === 0 && <h3 className="display text-4xl">No winner this round</h3>}
+              {result?.awards.map((award, i) => (
+                <div key={i} className="space-y-2">
+                  <h3 className="display text-4xl">
+                    {award.label ? `${award.label}: ` : result.awards.length > 1 ? `Pass ${i + 1}: ` : ''}
+                    {award.authorIds.length ? `Power ruined by ${namesOf(award.authorIds)}!` : 'A winning flaw was picked!'}
+                  </h3>
+                  <div className="inline-block">
+                    <WhiteCard text={award.text} isWinner />
+                  </div>
+                </div>
+              ))}
+              {result?.note && <p className="text-lg font-black">{result.note}</p>}
+              {round.entries.some((e) => e.votes !== undefined) && (
+                <div className="mx-auto max-w-md rounded-2xl border-[3px] border-ink bg-white p-3 text-left shadow-pop-sm">
+                  <p className="mb-1 text-xs font-black uppercase tracking-widest text-muted">Vote results</p>
+                  {[...round.entries]
+                    .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
+                    .map((e) => (
+                      <p key={e.id} className="flex justify-between gap-3 text-sm font-bold">
+                        <span className="truncate">{e.text}</span>
+                        <span className="shrink-0 font-black">{e.votes}</span>
+                      </p>
+                    ))}
                 </div>
               )}
-              {result?.note && <p className="text-lg font-black">{result.note}</p>}
-              <p className="text-lg font-black text-muted mt-2">Next superpower incoming...</p>
+              <p className="text-lg font-black text-muted">Next superpower incoming...</p>
             </div>
           </>
         );
@@ -219,11 +298,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
     }
   };
 
-  return (
-    <div className="h-full flex flex-col items-center justify-center gap-5 p-4">
-      {renderContent()}
-    </div>
-  );
+  return <div className="h-full flex flex-col items-center justify-center gap-5 p-4">{renderContent()}</div>;
 };
 
 export default GameBoard;

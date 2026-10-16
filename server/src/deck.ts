@@ -31,6 +31,11 @@ export class Deck<T> {
     this.reshuffle();
   }
 
+  // Put every discarded card back and reshuffle (Reboot).
+  resetAll() {
+    this.reshuffle();
+  }
+
   private reshuffle() {
     this.pile = shuffle([...this.pile, ...this.discards]);
     this.discards = [];

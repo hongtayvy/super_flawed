@@ -10,7 +10,7 @@ export interface PowerCard extends Card {
   kind: PowerKind;
 }
 
-export type Phase = 'lobby' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
+export type Phase = 'lobby' | 'wildcard' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
 
 // What a client is allowed to see. Never includes other players' hands or
 // the authors of flaws before judging is over.

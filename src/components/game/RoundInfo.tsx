@@ -2,6 +2,7 @@ import { useCountdown } from '../../hooks/useCountdown';
 import type { RoomState } from '../../types/game';
 
 const PHASE_LABELS: Record<string, string> = {
+  wildcard: 'Wildcard',
   submitting: 'Writing phase',
   judging: 'Judging',
   target: 'Plot Twist',
@@ -12,7 +13,7 @@ const PHASE_LABELS: Record<string, string> = {
 const RoundInfo = ({ state }: { state: RoomState }) => {
   const round = state.round!;
   const judge = state.players.find((p) => p.id === round.judgeId);
-  const secondsLeft = useCountdown(state.phase === 'submitting' ? round.deadline : null);
+  const secondsLeft = useCountdown(state.phase === 'submitting' || state.phase === 'wildcard' ? round.deadline : null);
 
   return (
     <div className="bg-white border-[3px] border-ink shadow-pop-sm p-3 rounded-2xl flex flex-wrap justify-between items-center gap-3">

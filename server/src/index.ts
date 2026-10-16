@@ -1,5 +1,4 @@
 // 📁 server/src/index.ts
-import session from 'express-session';
 import express from 'express';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
@@ -17,17 +16,10 @@ const allowedOrigins = [
   'https://super-flawed.victor-yang.workers.dev', // Cloudflare
 ];
 
-app.use(cors({ origin: allowedOrigins, credentials: true }));
-
-app.use(session({
-  secret: 'superflawed-secret',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false },
-}));
+app.use(cors({ origin: allowedOrigins }));
 
 const io = new Server(httpServer, {
-  cors: { origin: allowedOrigins, methods: ['GET', 'POST'], credentials: true },
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] },
 });
 
 const rooms = new Map<string, Room>();

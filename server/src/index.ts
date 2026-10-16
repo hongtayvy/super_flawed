@@ -1,18 +1,20 @@
-// 📁 server/index.ts
+// 📁 server/src/index.ts
 import session from 'express-session';
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import cors from 'cors';
+import { config } from './config';
+import { Room } from './room';
 
 const app = express();
 const httpServer = createServer(app);
 
 const allowedOrigins = [
-  "https://superflawed.netlify.app", // your production frontend
-  "https://6880424d6dd5960008c088c6--superflawed.netlify.app", // Netlify preview
-  "http://localhost:5173", // dev
-  "https://super-flawed.victor-yang.workers.dev", // Cloudflare
+  'https://superflawed.netlify.app', // production frontend
+  'https://6880424d6dd5960008c088c6--superflawed.netlify.app', // Netlify preview
+  'http://localhost:5173', // dev
+  'https://super-flawed.victor-yang.workers.dev', // Cloudflare
 ];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
@@ -21,161 +23,141 @@ app.use(session({
   secret: 'superflawed-secret',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false }
+  cookie: { secure: false },
 }));
 
 const io = new Server(httpServer, {
-  cors: { origin: allowedOrigins, methods: ['GET', 'POST'], credentials: true }
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'], credentials: true },
 });
 
-interface PlayerType {
-  id: string;
-  name: string;
-  avatar: string;
-  isHost: boolean;
-  score: number;
-  isReady: boolean;
-  isBot: boolean;
-}
+const rooms = new Map<string, Room>();
 
-interface CardType {
-  id: string;
-  text: string;
-}
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const normalizeCode = (code: unknown) => String(code ?? '').trim().toUpperCase();
 
-interface CardSubmission {
-  playerId: string;
-  card: CardType;
-}
+const newCode = () => {
+  for (;;) {
+    let code = '';
+    for (let i = 0; i < 6; i++) code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+    if (!rooms.has(code)) return code;
+  }
+};
 
-interface GameState {
-  players: PlayerType[];
-  submissions: CardSubmission[];
-  chat: any[];
-  scores: Record<string, number>;
-  hands: Record<string, CardType[]>;
-}
+const cleanName = (name: unknown) => String(name ?? '').trim().slice(0, 20);
+const cleanAvatar = (avatar: unknown) => (/^[0-7]$/.test(String(avatar)) ? String(avatar) : '0');
 
-const games: Record<string, GameState> = {};
+type Ack = (res: { ok: boolean; error?: string; gameCode?: string; playerId?: string }) => void;
+const ackOf = (ack: unknown): Ack => (typeof ack === 'function' ? (ack as Ack) : () => {});
+
+// The socket's identity is set on join and trusted from then on. Clients never
+// get to claim a player ID in later events.
+const identify = (socket: Socket): { room: Room; playerId: string } | null => {
+  const { code, playerId } = socket.data as { code?: string; playerId?: string };
+  const room = code ? rooms.get(code) : undefined;
+  if (!room || !playerId || !room.players.has(playerId)) return null;
+  room.lastActivity = Date.now();
+  return { room, playerId };
+};
 
 io.on('connection', (socket) => {
-  console.log('🔌 User connected:', socket.id);
+  socket.on('create-room', (payload, ack) => {
+    const reply = ackOf(ack);
+    const name = cleanName(payload?.player?.name);
+    if (!name) return reply({ ok: false, error: 'Enter a name.' });
 
-  socket.on('join-lobby', (payload, callback) => {
-    console.log('[Server] Received join-lobby:', payload);
-    // forward to join-room logic
-    socket.emit('join-room', payload, callback);
+    const room = new Room(newCode(), io);
+    rooms.set(room.code, room);
+    const host = room.addPlayer(name, cleanAvatar(payload?.player?.avatar), true);
+
+    socket.data = { code: room.code, playerId: host.id };
+    room.attach(host.id, socket.id);
+    reply({ ok: true, gameCode: room.code, playerId: host.id });
   });
 
-socket.on('join-room', ({ gameCode, player }, callback) => {
-  console.log('[Server] join-room payload:', gameCode, player);
-  const code = gameCode.toLowerCase();
-    if (!games[code]) {
-      games[code] = {
-        players: [], submissions: [], chat: [], scores: {}, hands: {}
-      };
+  // Handles first join and reconnect: a known playerId re-attaches existing state.
+  socket.on('join-room', (payload, ack) => {
+    const reply = ackOf(ack);
+    const code = normalizeCode(payload?.gameCode);
+    const room = rooms.get(code);
+    if (!room) return reply({ ok: false, error: 'Room not found.' });
+
+    let player = typeof payload?.playerId === 'string' ? room.players.get(payload.playerId) : undefined;
+    if (!player) {
+      if (room.phase !== 'lobby') return reply({ ok: false, error: 'That game has already started.' });
+      if (room.players.size >= config.maxPlayers) return reply({ ok: false, error: 'That room is full.' });
+      const name = cleanName(payload?.player?.name);
+      if (!name) return reply({ ok: false, error: 'Enter a name.' });
+      player = room.addPlayer(name, cleanAvatar(payload?.player?.avatar), false);
     }
 
-    const existing = games[code].players.find(p => p.id === player.id);
-    if (!existing && player?.id && player?.name) {
-      games[code].players.push(player);
-      games[code].scores[player.id] = 0;
-      console.log('Player', player.name, 'joined room', gameCode);
-      console.log('[Server] Current players in room', code, games[code].players.map(p => p.name));
-    }
-
-    socket.join(code);
-    io.to(code).emit('lobby-players', games[code].players);
-
-    if (callback) callback(); // ✅ Acknowledge emit
+    socket.data = { code, playerId: player.id };
+    room.attach(player.id, socket.id);
+    reply({ ok: true, gameCode: code, playerId: player.id });
   });
 
-  socket.on('player-ready', ({ gameCode, playerId, isReady }) => {
-    const code = gameCode.toLowerCase();
-    if (!games[code]) return;
-
-    games[code].players = games[code].players.map(p =>
-      p.id === playerId ? { ...p, isReady } : p
-    );
-
-    io.to(code).emit('lobby-players', games[code].players);
+  socket.on('player-ready', ({ isReady }) => {
+    const ctx = identify(socket);
+    if (ctx) ctx.room.setReady(ctx.playerId, Boolean(isReady));
   });
 
-  socket.on('toggle-bots', ({ gameCode }) => {
-    const code = gameCode.toLowerCase();
-    if (!games[code]) return;
-
-    const bots: PlayerType[] = [
-      { id: 'sean', name: 'Sean Jerubin', avatar: '2', isHost: false, score: 0, isReady: false, isBot: true },
-      { id: 'rengo', name: 'Rengo Yang', avatar: '4', isHost: false, score: 0, isReady: false, isBot: true },
-      { id: 'yeng', name: 'Yeng Chang', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
-      { id: 'tdawg', name: 'Tdawg Thao', avatar: '3', isHost: false, score: 0, isReady: false, isBot: true },
-    ];
-
-    const currentPlayers = games[code].players;
-    const hasBots = currentPlayers.some(p => bots.map(b => b.id).includes(p.id));
-
-    games[code].players = hasBots
-      ? currentPlayers.filter(p => !p.isBot)
-      : [...currentPlayers, ...bots];
-
-    io.to(code).emit('lobby-players', games[code].players);
+  socket.on('toggle-bots', () => {
+    const ctx = identify(socket);
+    if (ctx) ctx.room.toggleBots(ctx.playerId);
   });
 
-  socket.on('start-game', ({ gameCode }) => {
-    const code = gameCode.toLowerCase();
-    if (!games[code]) return;
-
-    io.to(code).emit('game-started', { gameCode: code });
+  socket.on('set-timer', ({ seconds }) => {
+    const ctx = identify(socket);
+    if (ctx) ctx.room.setTimerSeconds(ctx.playerId, Number(seconds));
   });
 
-  socket.on('submit-card', ({ gameCode, submission }) => {
-    const code = gameCode.toLowerCase();
-    const existing = games[code].submissions.findIndex(s => s.playerId === submission.playerId);
-
-    if (existing !== -1) {
-      games[code].submissions[existing] = submission;
-    } else {
-      games[code].submissions.push(submission);
-    }
-
-    io.to(code).emit('update-submissions', games[code].submissions);
+  socket.on('start-game', (_payload, ack) => {
+    const ctx = identify(socket);
+    const reply = ackOf(ack);
+    if (!ctx) return reply({ ok: false, error: 'Not in a room.' });
+    const error = ctx.room.start(ctx.playerId);
+    reply(error ? { ok: false, error } : { ok: true });
   });
 
-  socket.on('start-round', ({ gameCode, round, hands, scores }) => {
-    const code = gameCode.toLowerCase();
-    if (!games[code]) return;
+  const action = (event: string, run: (room: Room, playerId: string, payload: any) => string | null) => {
+    socket.on(event, (payload, ack) => {
+      const ctx = identify(socket);
+      const reply = ackOf(ack);
+      if (!ctx) return reply({ ok: false, error: 'Not in a room.' });
+      const error = run(ctx.room, ctx.playerId, payload ?? {});
+      reply(error ? { ok: false, error } : { ok: true });
+    });
+  };
 
-    games[code].hands = hands;
-    games[code].scores = scores;
-    games[code].submissions = [];
-
-    io.to(code).emit('start-round', { round, hands, scores });
+  action('submit-card', (room, id, p) => room.submit(id, String(p.cardId)));
+  action('pick-winner', (room, id, p) => room.pickWinner(id, String(p.entryId)));
+  action('pick-target', (room, id, p) => room.pickTarget(id, String(p.targetId)));
+  action('play-again', (room, id) => {
+    room.playAgain(id);
+    return null;
   });
 
-  socket.on('update-winner', ({ gameCode, winner }) => {
-    const code = gameCode.toLowerCase();
-    if (!games[code]) return;
-
-    games[code].scores[winner.playerId] = (games[code].scores[winner.playerId] || 0) + 1;
-    io.to(code).emit('update-winner', winner);
+  socket.on('leave-room', () => {
+    const ctx = identify(socket);
+    if (!ctx) return;
+    ctx.room.leave(ctx.playerId);
+    socket.data = {};
   });
 
-  socket.on('chat-message', ({ gameCode, message }) => {
-    const code = gameCode.toLowerCase();
-    if (!games[code]) {
-      games[code] = { players: [], submissions: [], chat: [], scores: {}, hands: {} };
-    }
-    games[code].chat.push(message);
-    io.to(code).emit('chat-message', message);
-  });
-
-  socket.on('leave-room', ({ gameCode, playerId }) => {
-    const code = gameCode.toLowerCase();
-    socket.leave(code);
-    // …optionally remove from games[code].players and re-emit…
+  socket.on('disconnect', () => {
+    const ctx = identify(socket);
+    if (ctx) ctx.room.detach(socket.id);
   });
 });
+
+// Drop rooms nobody has been connected to for a long while.
+setInterval(() => {
+  for (const [code, room] of rooms) {
+    if (!room.hasConnectedHumans && Date.now() - room.lastActivity > config.roomIdleMs) {
+      room.dispose();
+      rooms.delete(code);
+    }
+  }
+}, 5 * 60 * 1000).unref();
 
 app.get('/', (_, res) => {
   res.send('🟢 Super Flawed backend active');

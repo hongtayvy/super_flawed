@@ -1,59 +1,52 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PlusCircle, Users } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import PlayerSetup from '../components/game/PlayerSetup';
 import { useGame } from '../contexts/GameContext';
-import { socket } from '../socket'; // ✅ import the socket
+import { useToast } from '../hooks/useToast';
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const { setPlayerInfo } = useGame();
+  const [searchParams] = useSearchParams();
+  const { createRoom, joinRoom } = useGame();
+  const { toast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [gameCode, setGameCode] = useState('');
 
-  const handleCreateGame = (playerName: string, playerAvatar: string) => {
-    const id = crypto.randomUUID();
-    const newGameCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  // Shared invite links look like /?join=ABC123
+  useEffect(() => {
+    const code = (searchParams.get('join') || '').trim().toUpperCase();
+    if (code) {
+      setGameCode(code.slice(0, 6));
+      setIsJoinModalOpen(true);
+    }
+  }, [searchParams]);
 
-    const player = {
-      id,
-      name: playerName,
-      avatar: playerAvatar,
-      isHost: true,
-      score: 0,
-      isReady: true,
-      isBot: false,
-    };
-
-    setPlayerInfo(player);
-
-    // Add acknowledgment-based navigation
-    socket.emit('join-room', { gameCode: newGameCode, player }, () => {
+  const handleCreateGame = async (playerName: string, playerAvatar: string) => {
+    const res = await createRoom(playerName.trim(), playerAvatar);
+    if (res.ok && res.gameCode) {
       setIsCreateModalOpen(false);
-      navigate(`/lobby?code=${newGameCode}`);
-    });
+      navigate(`/lobby?code=${res.gameCode}`);
+    } else {
+      toast({ title: res.error || 'Could not create a room.', variant: 'destructive' });
+    }
   };
 
-  const handleJoinGame = (playerName: string, playerAvatar: string) => {
-    const id = crypto.randomUUID();
-
-    const player = {
-      id,
-      name: playerName,
-      avatar: playerAvatar,
-      isHost: false,
-      score: 0,
-      isReady: true,
-      isBot: false,
-    };
-
-    setPlayerInfo(player);
-    socket.emit('join-room', { gameCode, player }); // ✅ join socket room
-    setIsJoinModalOpen(false);
-    navigate(`/lobby?code=${gameCode}`);
+  const handleJoinGame = async (playerName: string, playerAvatar: string) => {
+    if (gameCode.trim().length !== 6) {
+      toast({ title: 'Enter the 6-character room code.', variant: 'destructive' });
+      return;
+    }
+    const res = await joinRoom(gameCode, playerName.trim(), playerAvatar);
+    if (res.ok && res.gameCode) {
+      setIsJoinModalOpen(false);
+      navigate(`/lobby?code=${res.gameCode}`);
+    } else {
+      toast({ title: res.error || 'Could not join that room.', variant: 'destructive' });
+    }
   };
 
   return (

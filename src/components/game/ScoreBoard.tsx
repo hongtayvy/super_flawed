@@ -1,110 +1,47 @@
-import { X, Trophy, Crown } from 'lucide-react';
-import { PlayerType } from '../../types/game';
+import { Trophy, Crown } from 'lucide-react';
 import { getAvatarColor } from '../../utils/avatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import type { RoomState } from '../../types/game';
 
-interface ScoreBoardProps {
-  players: PlayerType[];
-  cardCzarId: string;
-  isOpen: boolean;
-  onClose: () => void;
-}
+const ScoreBoard = ({ state }: { state: RoomState }) => {
+  const judgeId = state.round?.judgeId;
+  const sorted = [...state.players].sort((a, b) => b.score - a.score);
 
-const ScoreBoard = ({ players, cardCzarId, isOpen, onClose }: ScoreBoardProps) => {
-  // Sort players by score in descending order
-  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-  
-  if (!isOpen) {
-    return (
-      <div className="p-4 border-b-[3px] border-ink">
-        <h3 className="display text-2xl mb-2">Scoreboard</h3>
-        <div className="space-y-2">
-          {sortedPlayers.slice(0, 3).map((player, index) => (
-            <div key={player.id} className="flex items-center justify-between">
-              <div className="flex items-center">
-                {index === 0 && <Trophy size={16} className="mr-1 text-ink fill-sun" />}
-                <span>{player.name}</span>
-                {player.id === cardCzarId && (
-                  <Crown size={14} className="ml-1 text-cobalt" />
-                )}
-              </div>
-              <span className="font-black">{player.score} ★</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 z-10 bg-ink/70 flex items-center justify-center p-4"
-      >
-        <motion.div
-          initial={{ scale: 0.9, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.9, y: 20 }}
-          className="bg-white border-4 border-ink rounded-3xl shadow-[8px_9px_0_#FFE56A] p-6 w-full max-w-md"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="display text-3xl flex items-center">
-              <Trophy size={24} className="mr-2 text-ink fill-sun" />
-              Scoreboard
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-ink hover:text-coral"
-              aria-label="Close scoreboard"
+    <div className="p-4 border-b-[3px] border-ink">
+      <h3 className="display text-2xl mb-1 flex items-center gap-2">
+        <Trophy size={20} className="text-ink fill-sun" />
+        Scoreboard
+      </h3>
+      <p className="text-[10px] font-black uppercase tracking-wide text-muted mb-3">
+        First to {state.rules.winScore} wins
+      </p>
+      <div className="space-y-2">
+        {sorted.map((player, index) => (
+          <div
+            key={player.id}
+            className={`flex items-center gap-2 p-2 rounded-xl border-2 ${
+              index === 0 && player.score > 0 ? 'bg-sun border-ink' : 'bg-ice border-line'
+            } ${player.connected ? '' : 'opacity-60'}`}
+          >
+            <div
+              className={`w-8 h-8 shrink-0 rounded-full border-2 border-ink flex items-center justify-center text-sm font-black ${getAvatarColor(player.avatar)}`}
             >
-              <X size={24} />
-            </button>
+              {player.name.charAt(0)}
+            </div>
+            <div className="flex-grow min-w-0 flex items-center gap-1">
+              <span className="font-black truncate">{player.name}</span>
+              {player.id === judgeId && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase bg-cobalt text-white px-2 py-0.5 rounded-full">
+                  <Crown size={10} /> Judge
+                </span>
+              )}
+              {player.id === state.you && <span className="text-[10px] font-black text-cobalt">YOU</span>}
+            </div>
+            <span className="display text-2xl">{player.score}</span>
           </div>
-          
-          <div className="space-y-4">
-            {sortedPlayers.map((player, index) => (
-              <div 
-                key={player.id}
-                className={`flex items-center p-3 rounded-lg ${
-                  index === 0 ? 'bg-sun border-2 border-ink shadow-pop-sm' : 
-                  index === 1 ? 'bg-lilac border-2 border-ink' : 
-                  index === 2 ? 'bg-mint border-2 border-ink' : 
-                  'bg-ice border-2 border-line'
-                }`}
-              >
-                <div className="w-8 text-center font-bold">
-                  {index + 1}
-                </div>
-                <div className={`w-10 h-10 rounded-full border-2 border-ink flex items-center justify-center text-lg font-black mx-3 ${
-                  getAvatarColor(player.avatar)
-                }`}>
-                  {player.name.charAt(0)}
-                </div>
-                <div className="flex-grow">
-                  <div className="flex items-center">
-                    <span className="font-black">{player.name}</span>
-                    {player.isHost && (
-                      <Crown size={14} className="ml-1 text-ink fill-sun" />
-                    )}
-                    {player.id === cardCzarId && (
-                      <span className="ml-2 text-[10px] font-black uppercase bg-cobalt px-2 py-0.5 rounded-full text-white">
-                        Judge
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="display text-3xl">
-                  {player.score}
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        ))}
+      </div>
+    </div>
   );
 };
 

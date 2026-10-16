@@ -1,0 +1,66 @@
+export interface Card {
+  id: string;
+  text: string;
+}
+
+export type PowerKind = 'power' | 'wildcard';
+
+export interface PowerCard extends Card {
+  kind: PowerKind;
+}
+
+export type Phase = 'lobby' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
+
+export interface Player {
+  id: string; // persistent player ID, separate from the socket ID
+  name: string;
+  avatar: string;
+  isHost: boolean;
+  isBot: boolean;
+  isReady: boolean;
+  score: number;
+  socketId: string | null;
+  connected: boolean;
+  disconnectedAt: number | null;
+  left: boolean; // explicitly left mid-game: skipped every round, never removed
+}
+
+// What a client is allowed to see. Never includes other players' hands or
+// the authors of flaws before judging is over.
+export interface PublicPlayer {
+  id: string;
+  name: string;
+  avatar: string;
+  isHost: boolean;
+  isBot: boolean;
+  isReady: boolean;
+  score: number;
+  connected: boolean;
+}
+
+export interface RoomState {
+  gameCode: string;
+  phase: Phase;
+  you: string;
+  players: PublicPlayer[];
+  settings: { timerSeconds: number; timerOptions: number[] };
+  rules: { winScore: number; minPlayers: number; maxPlayers: number };
+  hand: Card[];
+  round: RoundView | null;
+  gameWinnerId: string | null;
+}
+
+export interface RoundView {
+  number: number;
+  judgeId: string;
+  power: PowerCard;
+  twist: { id: string; name: string; description: string; judgingPrompt?: string } | null;
+  roundValue: number;
+  submittedIds: string[];
+  skippedIds: string[];
+  deadline: number | null;
+  // Anonymous during judging. Authors are only revealed once the round ends.
+  entries: { id: string; text: string; mine: boolean; playerId?: string; playerName?: string }[];
+  target: { prompt: string; eligibleIds: string[] } | null;
+  result: { winnerId: string | null; winnerText: string | null; note: string } | null;
+}

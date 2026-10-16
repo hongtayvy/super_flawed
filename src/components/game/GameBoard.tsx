@@ -1,79 +1,167 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import BlackCard from '../cards/BlackCard';
 import WhiteCard from '../cards/WhiteCard';
+import Button from '../ui/Button';
 import { useGame } from '../../contexts/GameContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../../hooks/useToast';
+import type { RoomState } from '../../types/game';
 
-const GameBoard = () => {
-  const { gameState, currentRound, selectWinningSubmission } = useGame();
-  const { blackCard, submissions, isCardCzar, winner } = currentRound;
+const GameBoard = ({ state }: { state: RoomState }) => {
+  const { pickWinner, pickTarget, playAgain } = useGame();
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
 
-  const renderGameStateContent = () => {
-    switch (gameState) {
-      case 'selecting':
+  const round = state.round!;
+  const me = state.players.find((p) => p.id === state.you);
+  const isJudge = round.judgeId === state.you;
+  const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '?';
+  const submitters = state.players.filter((p) => p.id !== round.judgeId && !round.skippedIds.includes(p.id));
+
+  const act = async (run: () => Promise<{ ok: boolean; error?: string }>) => {
+    if (busy) return;
+    setBusy(true);
+    const res = await run();
+    setBusy(false);
+    if (!res.ok) toast({ title: res.error || 'That did not work.', variant: 'destructive' });
+  };
+
+  const powerCard = <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />;
+
+  const twistBanner = round.twist && (
+    <div className="max-w-md w-full bg-sun border-[3px] border-ink rounded-2xl shadow-pop-sm px-4 py-3 text-center">
+      <span className="text-[11px] font-black uppercase tracking-[0.15em]">🌀 Plot Twist</span>
+      <div className="display text-2xl">{round.twist.name}</div>
+      <p className="text-sm font-bold">{round.twist.description}</p>
+    </div>
+  );
+
+  const wildcardNote = round.power.kind === 'wildcard' && (
+    <p className="max-w-md text-center text-sm font-bold text-muted">
+      {isJudge
+        ? 'Say your made-up power out loud, then everyone plays a flaw.'
+        : 'The judge is about to make up a power. Play a flaw that could ruin anything.'}
+    </p>
+  );
+
+  const renderContent = () => {
+    switch (state.phase) {
+      case 'submitting': {
+        const iSubmitted = round.submittedIds.includes(state.you);
+        const iWasSkipped = round.skippedIds.includes(state.you);
         return (
-          <div className="flex flex-col items-center">
-            <BlackCard text={blackCard.text} />
-            <div className="mt-8 text-center font-black">
-              {isCardCzar ? (
-                <p className="text-2xl">You're the judge this round! Wait for the flaws to roll in.</p>
+          <>
+            {powerCard}
+            {wildcardNote}
+            <div className="text-center font-black text-xl">
+              {isJudge ? (
+                <p>You're the judge! Waiting for flaws... ({round.submittedIds.length}/{submitters.length})</p>
+              ) : iWasSkipped ? (
+                <p>You were skipped this round. See you next one!</p>
+              ) : iSubmitted ? (
+                <p>Flaw locked in! Waiting for the others... ({round.submittedIds.length}/{submitters.length})</p>
               ) : (
-                <p className="text-xl">Pick the flaw from your hand that ruins this power best.</p>
+                <p>Pick the flaw from your hand that ruins this power best.</p>
+              )}
+              {round.skippedIds.length > 0 && (
+                <p className="text-sm text-muted mt-1">
+                  Skipped (disconnected or out of time): {round.skippedIds.map(nameOf).join(', ')}
+                </p>
               )}
             </div>
-          </div>
+          </>
         );
-        
+      }
+
       case 'judging':
         return (
-          <div className="flex flex-col items-center">
-            <BlackCard text={blackCard.text} />
-            <div className="mt-8">
-              {isCardCzar ? (
-                <p className="text-2xl font-black text-center mb-6">Which flaw ruins it best?</p>
-              ) : (
-                <p className="text-2xl font-black text-center mb-6">The judge is deciding who ruined it best...</p>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <AnimatePresence>
-                  {submissions.map((submission, index) => (
-                    <motion.div
-                      key={submission.playerId}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: index * 0.1 }}
-                      onClick={() => isCardCzar && selectWinningSubmission(submission.playerId)}
-                      className={`${isCardCzar ? 'cursor-pointer transform hover:scale-105 transition-transform' : ''}`}
-                    >
-                      <WhiteCard 
-                        text={submission.card.text}
-                        isSelectable={isCardCzar}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
+          <>
+            {powerCard}
+            <p className="text-2xl font-black text-center max-w-xl">
+              {isJudge
+                ? (round.twist?.judgingPrompt ?? 'Which flaw ruins it best?')
+                : 'The judge is deciding who ruined it best...'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl">
+              {round.entries.map((entry, index) => (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  onClick={() => isJudge && act(() => pickWinner(entry.id))}
+                  className={`relative ${isJudge ? 'cursor-pointer' : ''}`}
+                >
+                  <WhiteCard text={entry.text} isSelectable={isJudge} isSelected={entry.mine} />
+                  {entry.mine && (
+                    <span className="absolute -top-2 -right-2 bg-cobalt text-white text-[10px] font-black uppercase px-2 py-1 rounded-full border-2 border-ink">
+                      Yours
+                    </span>
+                  )}
+                </motion.div>
+              ))}
             </div>
-          </div>
+          </>
         );
-        
-      case 'roundEnd': {
-        const winningPlayer = winner ? winner.playerName : 'Unknown';
-        const winningCard = winner ? winner.card.text : '';
-        
+
+      case 'target':
         return (
-          <div className="flex flex-col items-center">
-            <BlackCard text={blackCard.text} />
-            <div className="mt-8 text-center">
-              <h3 className="display text-4xl mb-4">Power ruined by {winningPlayer}!</h3>
-              <div className="inline-block mb-4">
-                <WhiteCard 
-                  text={winningCard}
-                  isWinner={true}
-                />
+          <>
+            {powerCard}
+            {twistBanner}
+            {isJudge && round.target ? (
+              <div className="text-center">
+                <p className="text-2xl font-black mb-4">{round.target.prompt}</p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {round.target.eligibleIds.map((id) => (
+                    <Button key={id} variant="secondary" disabled={busy} onClick={() => act(() => pickTarget(id))}>
+                      {nameOf(id)}
+                    </Button>
+                  ))}
+                </div>
               </div>
-              <p className="text-lg font-black text-muted">Next superpower incoming...</p>
+            ) : (
+              <p className="text-2xl font-black text-center">The judge is resolving the Plot Twist...</p>
+            )}
+          </>
+        );
+
+      case 'roundEnd': {
+        const result = round.result;
+        return (
+          <>
+            {powerCard}
+            <div className="text-center">
+              <h3 className="display text-4xl mb-3">
+                {result?.winnerId ? `Power ruined by ${nameOf(result.winnerId)}!` : 'No winner this round'}
+              </h3>
+              {result?.winnerText && (
+                <div className="inline-block mb-3">
+                  <WhiteCard text={result.winnerText} isWinner />
+                </div>
+              )}
+              {result?.note && <p className="text-lg font-black">{result.note}</p>}
+              <p className="text-lg font-black text-muted mt-2">Next superpower incoming...</p>
             </div>
+          </>
+        );
+      }
+
+      case 'gameOver': {
+        const winner = state.players.find((p) => p.id === state.gameWinnerId);
+        return (
+          <div className="text-center">
+            <h3 className="display text-5xl mb-2">{winner ? `${winner.name} wins!` : 'Game over'}</h3>
+            <p className="text-lg font-black mb-4">
+              {winner?.id === state.you ? 'You ruined every hero. Legendary.' : 'Great power. Terrible friends.'}
+            </p>
+            {me?.isHost ? (
+              <Button size="lg" onClick={playAgain}>
+                Play again ↗
+              </Button>
+            ) : (
+              <p className="font-bold text-muted">Waiting for the host to start another game.</p>
+            )}
           </div>
         );
       }
@@ -84,8 +172,9 @@ const GameBoard = () => {
   };
 
   return (
-    <div className="h-full flex items-center justify-center p-4">
-      {renderGameStateContent()}
+    <div className="h-full flex flex-col items-center justify-center gap-5 p-4">
+      {state.phase !== 'target' && state.phase !== 'gameOver' && twistBanner}
+      {renderContent()}
     </div>
   );
 };

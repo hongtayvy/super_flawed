@@ -3,7 +3,7 @@ import Button from '../ui/Button';
 import { getAvatarColor } from '../../utils/avatar';
 
 interface PlayerSetupProps {
-  onSubmit: (name: string, avatar: string) => void;
+  onSubmit: (name: string, avatar: string) => void | Promise<void>;
   buttonText: string;
 }
 
@@ -31,6 +31,7 @@ const PlayerSetup = ({ onSubmit, buttonText }: PlayerSetupProps) => {
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your name"
           className="field"
+          maxLength={20}
           required
         />
       </div>

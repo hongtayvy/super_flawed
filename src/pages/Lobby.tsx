@@ -1,120 +1,53 @@
-import { useEffect, useState, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, Play, Bot } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Copy, Link as LinkIcon, Play, Bot } from 'lucide-react';
 import Button from '../components/ui/Button';
 import PlayerList from '../components/game/PlayerList';
 import { useGame } from '../contexts/GameContext';
-import type { PlayerType } from '../types/game';
 import { useToast } from '../hooks/useToast';
-import { socket } from '../socket';
+import { useRoomSession } from '../hooks/useRoomSession';
 
-const Lobby: React.FC = () => {
+const Lobby = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const gameCode: string = (searchParams.get('code') || '').trim().toLowerCase();
+  const code = (searchParams.get('code') || '').trim().toUpperCase();
 
-  const {
-    playerInfo,
-    setPlayers,
-    initializeGame,
-    resetPlayers,
-    resetGame,
-    players,
-  } = useGame();
+  const { leaveRoom, setReady, toggleBots, setTimerSeconds, startGame } = useGame();
   const { toast } = useToast();
-  const [isReady, setIsReady] = useState(false);
-  const alreadyJoined = useRef(false);
-  const botsAdded = useRef(false);
+  const state = useRoomSession(code, 'lobby');
 
-  // clear old players when mounting
-  useEffect(() => {
-    resetPlayers();
-  }, []);
+  if (!state) {
+    return <div className="p-8 text-center font-black uppercase tracking-wide">Finding your hideout...</div>;
+  }
 
-  // auto-join once we have a code + playerInfo
+  const me = state.players.find((p) => p.id === state.you);
+  const isHost = me?.isHost === true;
+  const { minPlayers, maxPlayers, winScore } = state.rules;
+  const everyoneReady = state.players.every((p) => p.isReady || p.isHost);
+  const enoughPlayers = state.players.length >= minPlayers;
+  const hasBots = state.players.some((p) => p.isBot);
 
-  useEffect(() => {
-
-    if (!alreadyJoined.current && playerInfo.id && gameCode) {
-
-
-      socket.emit('join-room', {
-        gameCode,
-        player: {
-          id: playerInfo.id,
-          name: playerInfo.name,
-          avatar: playerInfo.avatar,
-          isHost: playerInfo.isHost,
-          score: 0,
-          isReady: false,
-        },
-      });
-      alreadyJoined.current = true;
-    }
-  }, [playerInfo, gameCode]);
-
-  // listen for lobby updates & game start / errors
-  useEffect(() => {
-    socket.on('lobby-players', (updated: PlayerType[]) => {
-      setPlayers(updated);
-    });
-    socket.on('lobby-error', ({ message }: { message: string }) => {
-      toast({ title: message, variant: 'destructive' });
-      navigate('/');
-    });
-    socket.on('game-started', ({ gameCode: code }: { gameCode: string }) => {
-      initializeGame(code);
-      navigate(`/game/${code}`);
-    });
-
-    return () => {
-      socket.off('lobby-players');
-      socket.off('lobby-error');
-      socket.off('game-started');
-    };
-  }, [setPlayers, initializeGame, toast, navigate]);
-
-  // simulate bots/other players ready randomly
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPlayers(prev =>
-        prev.map(p =>
-          !p.isHost && Math.random() > 0.5 && !p.isReady
-            ? { ...p, isReady: true }
-            : p
-        )
-      );
-    }, 2000);
-    return () => clearInterval(id);
-  }, [setPlayers]);
-
-  const copyGameCode = () => {
-    navigator.clipboard.writeText(gameCode);
-    toast({ title: 'Copied!', description: 'Share this code.' });
+  const copy = (text: string, title: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => toast({ title }),
+      () => toast({ title: text }),
+    );
   };
 
-  const toggleReady = () => {
-    const val = !isReady;
-    setIsReady(val);
-    socket.emit('player-ready', {
-      gameCode,
-      playerId: playerInfo.id,
-      isReady: val,
-    });
+  const handleStart = async () => {
+    const res = await startGame();
+    if (!res.ok) toast({ title: res.error || 'Could not start.', variant: 'destructive' });
   };
 
-  const startGame = () => {
-    if (playerInfo.isHost) socket.emit('start-game', { gameCode });
+  const leave = () => {
+    leaveRoom();
+    navigate('/');
   };
 
-  const toggleBots = () => {
-    socket.emit('toggle-bots', { gameCode });
-    botsAdded.current = !botsAdded.current;
-  };
-
-  const allReady =
-    players.length >= 2 && players.every(p => p.isReady || p.isHost);
-  const canStart = playerInfo.isHost && allReady;
+  const startHint = !enoughPlayers
+    ? `Need at least ${minPlayers} players to start.`
+    : !everyoneReady
+      ? 'Waiting for everyone to get ready.'
+      : '';
 
   return (
     <div className="max-w-5xl mx-auto p-4 pt-8">
@@ -126,76 +59,101 @@ const Lobby: React.FC = () => {
       <div className="grid md:grid-cols-[1.14fr_.86fr] gap-6">
         <div className="panel">
           <h2 className="display text-3xl">Your room code</h2>
-          <p className="text-sm font-bold text-muted">Send this code to your future ex-friends.</p>
+          <p className="text-sm font-bold text-muted">Send this code (or the link) to your future ex-friends.</p>
           <div className="flex items-center justify-between gap-4 bg-sun border-[3px] border-dashed border-ink rounded-2xl px-5 py-4 my-5">
-            <span className="display text-5xl tracking-[0.15em]">{gameCode.toUpperCase()}</span>
-            <button
-              onClick={copyGameCode}
-              className="flex items-center gap-1 bg-white border-2 border-ink rounded-full px-3 py-2 text-xs font-black"
-              aria-label="Copy room code"
-            >
-              <Copy size={16} /> Copy
-            </button>
+            <span className="display text-5xl tracking-[0.15em]">{state.gameCode}</span>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => copy(state.gameCode, 'Room code copied!')}
+                className="flex items-center gap-1 bg-white border-2 border-ink rounded-full px-3 py-1 text-xs font-black"
+                aria-label="Copy room code"
+              >
+                <Copy size={14} /> Code
+              </button>
+              <button
+                onClick={() => copy(`${window.location.origin}/?join=${state.gameCode}`, 'Invite link copied!')}
+                className="flex items-center gap-1 bg-white border-2 border-ink rounded-full px-3 py-1 text-xs font-black"
+                aria-label="Copy invite link"
+              >
+                <LinkIcon size={14} /> Link
+              </button>
+            </div>
           </div>
 
-          <h2 className="display text-3xl mb-3">The gang</h2>
-          <div className="mb-6">
-            <PlayerList />
+          <h2 className="display text-3xl mb-1">
+            The gang{' '}
+            <small className="font-body text-xs font-extrabold text-muted">
+              {state.players.length} / {maxPlayers}
+            </small>
+          </h2>
+          <div className="mb-5">
+            <PlayerList players={state.players} />
+          </div>
+
+          <div className="mb-5">
+            <label htmlFor="timer" className="field-label">
+              Flaw timer
+            </label>
+            <select
+              id="timer"
+              className="field !py-2 max-w-[220px]"
+              value={state.settings.timerSeconds}
+              disabled={!isHost}
+              onChange={(e) => setTimerSeconds(Number(e.target.value))}
+            >
+              {state.settings.timerOptions.map((s) => (
+                <option key={s} value={s}>
+                  {s === 0 ? 'Off (wait for everyone)' : `${s} seconds`}
+                </option>
+              ))}
+            </select>
+            {!isHost && <p className="text-xs font-bold text-muted mt-1">The host picks this.</p>}
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {!playerInfo.isHost && (
-              <Button size="sm" variant={isReady ? 'primary' : 'outline'} onClick={toggleReady}>
-                {isReady ? 'Ready ✓' : "I'm ready ✓"}
+            {!isHost && (
+              <Button size="sm" variant={me?.isReady ? 'primary' : 'outline'} onClick={() => setReady(!me?.isReady)}>
+                {me?.isReady ? 'Ready ✓' : "I'm ready ✓"}
               </Button>
             )}
-            {playerInfo.isHost && (
+            {isHost && (
               <>
                 <Button size="sm" variant="outline" onClick={toggleBots}>
                   <Bot size={16} />
-                  {botsAdded.current ? 'Remove bots' : 'Add bots'}
+                  {hasBots ? 'Remove bots' : 'Add bots'}
                 </Button>
-                <Button size="sm" onClick={startGame} disabled={!canStart}>
+                <Button size="sm" onClick={handleStart} disabled={!enoughPlayers || !everyoneReady}>
                   <Play size={16} />
                   Start round ↗
                 </Button>
               </>
             )}
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={() => {
-                resetGame();
-                navigate('/');
-              }}
-            >
+            <Button size="sm" variant="danger" onClick={leave}>
               Leave
             </Button>
           </div>
+          {isHost && startHint && <p className="text-xs font-bold text-muted mt-3">{startHint}</p>}
         </div>
 
         <div className="space-y-6">
           <div className="relative overflow-hidden bg-cobalt border-[3px] border-ink rounded-3xl min-h-[230px] flex items-center">
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-56 w-56 rounded-full border-[25px] border-sun" />
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-56 w-56 rounded-full border-[25px] border-sun opacity-80" />
             <p className="display relative z-10 text-4xl text-white max-w-[200px] pl-6 [text-shadow:4px_4px_0_#17183E]">
               Same power. Different disasters.
             </p>
-            <img
-              src="/mascot/point.webp"
-              alt=""
-              className="absolute -bottom-6 -right-4 h-60 -rotate-6"
-            />
+            <img src="/mascot/point.webp" alt="" className="absolute -bottom-6 -right-4 h-60 -rotate-6" />
           </div>
 
           <div className="panel bg-[#F0EEFF]">
             <h2 className="display text-3xl mb-3">Quick house rules</h2>
             <ol className="font-extrabold">
               {[
-                'The judge reveals a superpower card.',
-                'Everyone else plays their funniest flaw.',
-                'The judge picks the worst catch.',
-                'The judge role rotates.',
-                'First to 10 points wins.',
+                'The judge flips a Super Power card.',
+                'Everyone else plays a Flaw card to sabotage it.',
+                'The judge picks the one funniest combo.',
+                'The judge role rotates every round.',
+                `First to ${winScore} points wins.`,
+                'Watch for Plot Twists and Wildcards in the deck.',
               ].map((rule, i) => (
                 <li key={rule} className="py-3 border-b border-line last:border-0">
                   <b className="text-cobalt mr-2">0{i + 1}</b>

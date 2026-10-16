@@ -1,48 +1,45 @@
-import { Trophy } from 'lucide-react';
+import { useCountdown } from '../../hooks/useCountdown';
+import type { RoomState } from '../../types/game';
 
-interface RoundInfoProps {
-  round: number;
-  cardCzar: string;
-  gameState: string;
-  onShowScoreboard: () => void;
-}
+const PHASE_LABELS: Record<string, string> = {
+  submitting: 'Writing phase',
+  judging: 'Judging',
+  target: 'Plot Twist',
+  roundEnd: 'Round complete',
+  gameOver: 'Game over',
+};
 
-const RoundInfo = ({ round, cardCzar, gameState, onShowScoreboard }: RoundInfoProps) => {
-  const getStateLabel = () => {
-    switch (gameState) {
-      case 'selecting': return 'Writing phase';
-      case 'judging': return 'Judging';
-      case 'roundEnd': return 'Round Complete';
-      default: return 'Loading...';
-    }
-  };
+const RoundInfo = ({ state }: { state: RoomState }) => {
+  const round = state.round!;
+  const judge = state.players.find((p) => p.id === round.judgeId);
+  const secondsLeft = useCountdown(state.phase === 'submitting' ? round.deadline : null);
 
   return (
-    <div className="bg-white border-[3px] border-ink shadow-pop-sm p-3 rounded-2xl mb-3 flex flex-wrap justify-between items-center">
-      <div className="flex items-center space-x-6">
+    <div className="bg-white border-[3px] border-ink shadow-pop-sm p-3 rounded-2xl flex flex-wrap justify-between items-center gap-3">
+      <div className="flex items-center gap-6">
         <div>
           <span className="text-[10px] font-black uppercase tracking-widest text-muted">Round</span>
-          <div className="display text-2xl">{round}</div>
+          <div className="display text-2xl">{round.number}</div>
         </div>
-        
         <div>
           <span className="text-[10px] font-black uppercase tracking-widest text-muted">Judge</span>
-          <div className="display text-2xl">{cardCzar}</div>
+          <div className="display text-2xl">{judge?.name ?? '?'}</div>
         </div>
-        
         <div>
           <span className="text-[10px] font-black uppercase tracking-widest text-muted">Phase</span>
-          <div className="display text-2xl">{getStateLabel()}</div>
+          <div className="display text-2xl">{PHASE_LABELS[state.phase] ?? '...'}</div>
         </div>
       </div>
-      
-      <button
-        onClick={onShowScoreboard}
-        className="flex items-center gap-2 px-4 py-2 bg-sun border-2 border-ink rounded-full shadow-pop-sm text-xs font-black uppercase hover:-translate-y-0.5 transition-transform"
-      >
-        <Trophy size={18} className="text-ink" />
-        <span>Scoreboard</span>
-      </button>
+      {secondsLeft !== null && (
+        <div
+          className={`display text-3xl px-4 py-1 rounded-full border-[3px] border-ink ${
+            secondsLeft <= 10 ? 'bg-coral' : 'bg-sun'
+          }`}
+          aria-label="Time left to submit"
+        >
+          {secondsLeft}s
+        </div>
+      )}
     </div>
   );
 };

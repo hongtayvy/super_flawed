@@ -39,7 +39,7 @@ There are 17 twists (about 1 round in 6 has one). Some need a minimum number of 
 | Twist | What it does |
 |-------|--------------|
 | **Super Strength** | The round is worth 2 points. |
-| **Mirror Universe** | The judge picks the **least** funny flaw, and it wins. |
+| **Opposite Day** | The judge picks the **least** funny flaw, and it wins. |
 | **Sidekick** | The winner's point is also given to a second player, **chosen by the winner** (not the judge or themselves). If only one player qualifies, they get it automatically. |
 | **Villain** | The winner also steals 1 point from a player who has one (judge picks; automatic if only one player has points). Does nothing if nobody has points. |
 | **Team Up** *(5+ players)* | Players are randomly paired (one team of 3 when odd) and each team's flaws combine into one flaw. Every member of the winning team scores. |

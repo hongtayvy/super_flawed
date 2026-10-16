@@ -63,10 +63,10 @@ export const TWISTS: TwistDef[] = [
     roundValue: 2,
   },
   {
-    id: 'mirror_universe',
-    name: 'Mirror Universe',
+    id: 'opposite_day',
+    name: 'Opposite Day',
     description: 'The judge picks the LEAST funny flaw. The worst one wins!',
-    judgingPrompt: 'Mirror Universe: pick the LEAST funny flaw. It wins the round!',
+    judgingPrompt: 'Opposite Day: pick the LEAST funny flaw. It wins the round!',
   },
   {
     id: 'sidekick',

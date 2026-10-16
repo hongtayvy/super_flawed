@@ -2,9 +2,11 @@
 
 **Super Flawed** is a real-time multiplayer party game with a superhero skin. Every round a great superpower gets flipped, and everyone else races to sabotage it with the funniest possible flaw.
 
-**Play it:** https://super-flawed.victor-yang.workers.dev (the first connection after a quiet spell can take about a minute while the free backend wakes up).
+> **Status: the game server is currently down.** The site at https://superflawed.com loads, but rooms can't be created or joined until the backend is back up.
 
 ## 🎮 How to play
+
+The same rules are on the site's **/rules** page. That page and the landing page's twist list read straight from `server/src/twists.ts`, so the list stays in step with the game; the other numbers (win score, hand size, player limits) mirror `server/src/config.ts`.
 
 Private rooms for **3 to 8 players**. Create a room, share the code or invite link, and everyone joins from the lobby.
 
@@ -54,7 +56,7 @@ There are 17 twists (about 1 round in 6 has one). Some need a minimum number of 
 | **Arch Nemesis** | The winner scores, and the highest-scoring *other* player loses a point (all tied leaders lose one). |
 | **Multiverse Mixup** | All hands are shuffled together and dealt back out, so you play someone else's cards. |
 | **Public Service Announcement** | Emergency broadcast: only **20 seconds** to play a flaw, whatever the room timer says. |
-| **Breaking the Fourth Wall** *(4+ players)* | The judge plays a flaw too (mixed in anonymously) and **the whole group votes**, judge included. You can't vote for your own flaw. Most votes wins. **If there is a tie, the judge picks** between the tied flaws. |
+| **Judge-ivine Intervention** *(4+ players)* | The judge looks into everyone's hand and **chooses the flaw each player plays** (players don't pick their own). The players then vote on the flaws, and you can't vote for your own. Most votes wins. **If there is a tie, the judge votes** between the tied flaws. The judge doesn't play a flaw or vote otherwise. |
 
 Points never go below 0. Only one twist per round.
 
@@ -87,7 +89,7 @@ super-flawed/
 │   ├── components/        # cards/, game/, layout/, ui/
 │   ├── contexts/          # GameContext: socket + room state
 │   ├── hooks/             # useRoomSession, useCountdown, useToast
-│   ├── pages/             # HomePage, Lobby, GameRoom
+│   ├── pages/             # HomePage, Rules, Lobby, GameRoom
 │   ├── types/             # Wire types shared with the server
 │   └── utils/
 ├── public/                # Static assets (mascot art, favicon)
@@ -145,7 +147,8 @@ All game state flows through the server. Actions are acknowledged with `{ ok, er
 | `start-game` | Host → Server | Start once 3 to 8 players are ready |
 | `set-wildcard` | Judge → Server | Type the made-up power on a Wildcard round |
 | `submit-card` | Client → Server | Play a flaw from your hand |
-| `vote` | Client → Server | Vote for a flaw (Breaking the Fourth Wall) |
+| `choose-cards` | Judge → Server | Choose a card from each player's hand (Judge-ivine Intervention) |
+| `vote` | Client → Server | Vote for a flaw (Judge-ivine Intervention) |
 | `pick-winner` | Judge → Server | Pick the winning flaw |
 | `pick-target` | Judge or winner → Server | Make a twist's follow-up pick (Sidekick: the winner; Villain, Civilian Casualty: the judge) |
 | `play-again` | Host → Server | Return to the lobby after a game |

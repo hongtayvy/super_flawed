@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import GameRoom from './pages/GameRoom';
 import Lobby from './pages/Lobby';
+import Rules from './pages/Rules';
 import { GameProvider } from './contexts/GameContext';
 import Header from './components/layout/Header';
 import { Toaster } from './components/ui/Toaster';
@@ -15,6 +16,7 @@ function App() {
           <main className="flex-grow">
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/rules" element={<Rules />} />
               <Route path="/lobby" element={<Lobby />} />
               <Route path="/game/:gameId" element={<GameRoom />} />
             </Routes>

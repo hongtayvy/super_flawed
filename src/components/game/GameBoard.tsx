@@ -8,23 +8,23 @@ import { useGame } from '../../contexts/GameContext';
 import { useToast } from '../../hooks/useToast';
 import type { EntryView, RoomState } from '../../types/game';
 
+type Picks = Record<string, string>; // playerId -> chosen cardId
+
 const WILDCARD_EXAMPLES = ['You can sneeze lightning.', 'You can talk to sandwiches.', 'You can pause any song forever.'];
 
 const GameBoard = ({ state }: { state: RoomState }) => {
-  const { pickWinner, pickTarget, playAgain, setWildcard, vote } = useGame();
+  const { pickWinner, pickTarget, playAgain, setWildcard, vote, chooseCards } = useGame();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [wildcardText, setWildcardText] = useState('');
+  const [picks, setPicks] = useState<Picks>({});
 
   const round = state.round!;
   const me = state.players.find((p) => p.id === state.you);
   const isJudge = round.judgeId === state.you;
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '?';
   const namesOf = (ids: string[]) => ids.map(nameOf).join(' & ');
-  const judgePlays = Boolean(round.twist?.judgeSubmits);
-  const submitters = state.players.filter(
-    (p) => (p.id !== round.judgeId || judgePlays) && !round.skippedIds.includes(p.id),
-  );
+  const submitters = state.players.filter((p) => p.id !== round.judgeId && !round.skippedIds.includes(p.id));
 
   const act = async (run: () => Promise<{ ok: boolean; error?: string }>) => {
     if (busy) return;
@@ -129,24 +129,78 @@ const GameBoard = ({ state }: { state: RoomState }) => {
           </>
         );
 
+      case 'choosing': {
+        const rows = round.choosing;
+        return (
+          <>
+            {cards}
+            {isJudge && rows ? (
+              <div className="w-full max-w-5xl space-y-4">
+                <p className="text-2xl font-black text-center">
+                  Judge-ivine Intervention! You can see everyone's hand. Choose the flaw each player plays.
+                </p>
+                {rows.map((row) => (
+                  <div key={row.playerId} className="rounded-3xl border-[3px] border-ink bg-white p-3 shadow-pop-sm">
+                    <p className="mb-2 flex items-center justify-between text-sm font-black uppercase tracking-wide">
+                      <span>{row.name}</span>
+                      <span className={picks[row.playerId] ? 'text-cobalt' : 'text-muted'}>
+                        {picks[row.playerId] ? 'Chosen ✓' : 'Pick one'}
+                      </span>
+                    </p>
+                    <div className="flex gap-3 overflow-x-auto pb-2">
+                      {row.cards.map((card) => (
+                        <div
+                          key={card.id}
+                          className="w-44 shrink-0 cursor-pointer"
+                          onClick={() => setPicks((prev) => ({ ...prev, [row.playerId]: card.id }))}
+                        >
+                          <WhiteCard text={card.text} isSelectable isSelected={picks[row.playerId] === card.id} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="text-center">
+                  <Button
+                    size="lg"
+                    disabled={busy || rows.some((r) => !picks[r.playerId])}
+                    onClick={() =>
+                      act(async () => {
+                        const res = await chooseCards(rows.map((r) => ({ playerId: r.playerId, cardId: picks[r.playerId] })));
+                        if (res.ok) setPicks({});
+                        return res;
+                      })
+                    }
+                  >
+                    Lock in these flaws ⚡
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="max-w-xl text-center text-2xl font-black">
+                Judge-ivine Intervention! {nameOf(round.judgeId)} is looking through everyone's hands and choosing the
+                flaw each player plays...
+              </p>
+            )}
+          </>
+        );
+      }
+
       case 'submitting': {
         const iSubmitted = round.submittedIds.includes(state.you);
         const iWasSkipped = round.skippedIds.includes(state.you);
-        const iPlay = !isJudge || judgePlays;
         return (
           <>
             {passBadge}
             {cards}
             {wildcardNote}
             <div className="text-center font-black text-xl">
-              {!iPlay ? (
+              {isJudge ? (
                 <p>You're the judge! Waiting for flaws... ({round.submittedIds.length}/{submitters.length})</p>
               ) : iWasSkipped ? (
                 <p>You were skipped this round. See you next one!</p>
               ) : iSubmitted ? (
                 <p>Flaw locked in! Waiting for the others... ({round.submittedIds.length}/{submitters.length})</p>
-              ) : isJudge ? (
-                <p>Breaking the Fourth Wall! Play a flaw of your own. It's mixed in anonymously, and the group votes.</p>
               ) : (
                 <p>
                   {round.power2
@@ -169,14 +223,23 @@ const GameBoard = ({ state }: { state: RoomState }) => {
           <>
             {cards}
             <p className="text-2xl font-black text-center max-w-xl">
-              Vote for the funniest flaw! ({round.votedIds.length}/{state.players.length} voted)
+              {isJudge ? 'The group is voting...' : 'Vote for the funniest flaw!'} ({round.votedIds.length}/
+              {state.players.length - 1} voted)
             </p>
             <p className="text-sm font-bold text-muted">
-              {round.myVote ? 'Vote cast. Tap another flaw to change it.' : 'You can\'t vote for your own flaw.'}
+              {isJudge
+                ? "You picked these flaws. If the vote is tied, you decide."
+                : round.myVote
+                  ? 'Vote cast. Tap another flaw to change it.'
+                  : "You can't vote for your own flaw."}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl">
               {round.entries.map((entry) =>
-                entryCard(entry, entry.mine ? undefined : () => act(() => vote(entry.id)), entry.id === round.myVote),
+                entryCard(
+                  entry,
+                  isJudge || entry.mine ? undefined : () => act(() => vote(entry.id)),
+                  entry.id === round.myVote,
+                ),
               )}
             </div>
           </>

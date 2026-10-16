@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Copy, Link as LinkIcon, Play, Bot } from 'lucide-react';
 import Button from '../components/ui/Button';
 import PlayerList from '../components/game/PlayerList';
@@ -149,11 +149,11 @@ const Lobby = () => {
             <ol className="font-extrabold">
               {[
                 'The judge flips a Super Power card.',
-                'Everyone else plays a Flaw card to sabotage it.',
-                'The judge picks the one funniest combo.',
-                'The judge role rotates every round.',
+                'Everyone else secretly plays a Flaw card to sabotage it.',
+                'The judge picks the one funniest combo. No ties.',
+                'The judge changes every round, in order.',
                 `First to ${winScore} points wins.`,
-                'Watch for Plot Twists and Wildcards in the deck.',
+                'Plot Twists and a Wildcard are shuffled into the deck.',
               ].map((rule, i) => (
                 <li key={rule} className="py-3 border-b border-line last:border-0">
                   <b className="text-cobalt mr-2">0{i + 1}</b>
@@ -161,6 +161,13 @@ const Lobby = () => {
                 </li>
               ))}
             </ol>
+            <Link
+              to="/rules"
+              target="_blank"
+              className="mt-4 inline-block text-sm font-black uppercase tracking-wide underline decoration-[3px] underline-offset-4 hover:text-cobalt"
+            >
+              Read the full rules ↗
+            </Link>
           </div>
         </div>
       </div>

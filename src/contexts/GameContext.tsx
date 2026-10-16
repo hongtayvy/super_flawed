@@ -27,6 +27,7 @@ interface GameContextType {
   setWildcard: (text: string) => Promise<Ack>;
   submitCard: (cardId: string) => Promise<Ack>;
   vote: (entryId: string) => Promise<Ack>;
+  chooseCards: (picks: { playerId: string; cardId: string }[]) => Promise<Ack>;
   pickWinner: (entryId: string) => Promise<Ack>;
   pickTarget: (targetId: string) => Promise<Ack>;
   playAgain: () => void;
@@ -89,6 +90,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     socket.on('update-state', onState);
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    // The socket may already be connected before these listeners existed; don't miss that.
+    setConnected(socket.connected);
     return () => {
       socket.off('update-state', onState);
       socket.off('connect', onConnect);
@@ -155,6 +158,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setWildcard: (text) => emitWithAck('set-wildcard', { text }),
     submitCard: (cardId) => emitWithAck('submit-card', { cardId }),
     vote: (entryId) => emitWithAck('vote', { entryId }),
+    chooseCards: (picks) => emitWithAck('choose-cards', { picks }),
     pickWinner: (entryId) => emitWithAck('pick-winner', { entryId }),
     pickTarget: (targetId) => emitWithAck('pick-target', { targetId }),
     playAgain: () => socket.emit('play-again'),

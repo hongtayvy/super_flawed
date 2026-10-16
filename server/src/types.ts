@@ -9,7 +9,7 @@ export interface PowerCard extends Card {
   kind: PowerKind;
 }
 
-export type Phase = 'lobby' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
+export type Phase = 'lobby' | 'wildcard' | 'submitting' | 'judging' | 'target' | 'roundEnd' | 'gameOver';
 
 export interface Player {
   id: string; // persistent player ID, separate from the socket ID

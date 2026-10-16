@@ -12,6 +12,8 @@ export interface TwistDef {
   id: string;
   name: string;
   description: string;
+  // Copies in the Super Power deck: higher means it shows up more often. Defaults to 1.
+  weight?: number;
   // Points the round winner earns. Defaults to 1.
   roundValue?: number;
   // Replaces the judge's default prompt, e.g. for Mirror Universe.
@@ -32,6 +34,7 @@ export const TWISTS: TwistDef[] = [
     id: 'double_jeopardy',
     name: 'Double Jeopardy',
     description: 'This round is worth 2 points.',
+    weight: 2,
     roundValue: 2,
   },
   {

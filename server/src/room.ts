@@ -37,6 +37,14 @@ const BOTS = [
   { id: 'bot-tdawg', name: 'Tdawg Thao', avatar: '5' },
 ];
 
+const BOT_WILDCARDS = [
+  'You can turn any sandwich into a loyal pet.',
+  'You can talk to the moon, and it talks back.',
+  'You can make any song stuck in anyone\'s head.',
+  'You can summon a very polite thunderstorm.',
+  'You can make clouds do whatever you say.',
+];
+
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 const pick = <T>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
 
@@ -70,7 +78,9 @@ export class Room {
     return [
       ...POWER_CARDS.map((card): DeckEntry => ({ kind: 'card', card })),
       { kind: 'card', card: WILDCARD },
-      ...TWISTS.map((twist): DeckEntry => ({ kind: 'twist', twist })),
+      ...TWISTS.flatMap((twist): DeckEntry[] =>
+        Array.from({ length: twist.weight ?? 1 }, () => ({ kind: 'twist', twist })),
+      ),
     ];
   }
 
@@ -284,11 +294,55 @@ export class Room {
       target: null,
       result: null,
     };
-    this.phase = 'submitting';
+
+    if (power.kind === 'wildcard') this.beginWildcard();
+    else this.beginSubmitting();
+  }
+
+  // Wildcard: the judge types the power before anyone plays a flaw.
+  private beginWildcard() {
+    const round = this.round!;
+    this.clearPhaseTimers();
+    this.phase = 'wildcard';
 
     const seconds = this.settings.timerSeconds;
     if (seconds > 0) {
-      this.round.deadline = Date.now() + seconds * 1000;
+      round.deadline = Date.now() + seconds * 1000;
+      // Out of time: the table gets a random power instead of stalling.
+      this.later(() => this.applyWildcard(pick(POWER_CARDS).text), seconds * 1000);
+    }
+
+    this.checkBlockers();
+    this.scheduleBots();
+    this.broadcast();
+  }
+
+  setWildcard(playerId: string, rawText: string): string | null {
+    const round = this.round;
+    if (this.phase !== 'wildcard' || !round) return 'No wildcard to fill in.';
+    if (playerId !== round.judgeId) return 'Only the judge makes up the power.';
+    const text = String(rawText ?? '').replace(/\s+/g, ' ').trim();
+    if (text.length < 3 || text.length > 100) return 'Make up a power (3 to 100 characters).';
+    this.applyWildcard(text);
+    return null;
+  }
+
+  private applyWildcard(text: string) {
+    const round = this.round;
+    if (this.phase !== 'wildcard' || !round) return;
+    round.power = { ...round.power, text };
+    this.beginSubmitting();
+  }
+
+  private beginSubmitting() {
+    const round = this.round!;
+    this.clearPhaseTimers();
+    this.phase = 'submitting';
+    round.deadline = null;
+
+    const seconds = this.settings.timerSeconds;
+    if (seconds > 0) {
+      round.deadline = Date.now() + seconds * 1000;
       this.later(() => this.onSubmitDeadline(), seconds * 1000);
     }
 
@@ -444,6 +498,13 @@ export class Room {
     const winningEntry = round.entries.find((e) => e.playerId === winnerId);
     round.result = { winnerId, winnerText: winningEntry?.card.text ?? null, note };
 
+    // One line per played flaw, so weak cards can be spotted later (win rate per card).
+    for (const [playerId, card] of round.submissions) {
+      console.log(
+        JSON.stringify({ evt: 'flaw_result', flaw: card.id, power: round.power.id, won: playerId === winnerId }),
+      );
+    }
+
     // Used cards go to the discard piles; hands are topped back up to full.
     this.flawDeck.discard([...round.submissions.values()]);
     this.powerDeck.discard(round.drawn);
@@ -507,7 +568,7 @@ export class Room {
         .map((id) => this.players.get(id)!)
         .filter((p) => !p.connected);
     }
-    if (this.phase === 'judging' || this.phase === 'target') {
+    if (this.phase === 'wildcard' || this.phase === 'judging' || this.phase === 'target') {
       const judge = this.players.get(round.judgeId);
       return judge && !judge.connected ? [judge] : [];
     }
@@ -541,7 +602,7 @@ export class Room {
     if (this.phase === 'submitting') {
       round.skipped.add(playerId);
       this.advanceFromSubmitting();
-    } else if (this.phase === 'judging' || this.phase === 'target') {
+    } else if (this.phase === 'wildcard' || this.phase === 'judging' || this.phase === 'target') {
       this.finishRound(round.winnerId, `${player.name} (the judge) disconnected. Round skipped.`);
     }
     this.broadcast();
@@ -554,7 +615,9 @@ export class Room {
     if (!round) return;
     const bots = [...this.players.values()].filter((p) => p.isBot);
 
-    if (this.phase === 'submitting') {
+    if (this.phase === 'wildcard' && this.players.get(round.judgeId)?.isBot) {
+      this.later(() => this.applyWildcard(pick(BOT_WILDCARDS)), rand(1500, 3000));
+    } else if (this.phase === 'submitting') {
       for (const bot of bots) {
         if (bot.id === round.judgeId) continue;
         this.later(() => {

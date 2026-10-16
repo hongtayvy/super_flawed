@@ -7,10 +7,13 @@ import { useGame } from '../../contexts/GameContext';
 import { useToast } from '../../hooks/useToast';
 import type { RoomState } from '../../types/game';
 
+const WILDCARD_EXAMPLES = ['You can sneeze lightning.', 'You can talk to sandwiches.', 'You can pause any song forever.'];
+
 const GameBoard = ({ state }: { state: RoomState }) => {
-  const { pickWinner, pickTarget, playAgain } = useGame();
+  const { pickWinner, pickTarget, playAgain, setWildcard } = useGame();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [wildcardText, setWildcardText] = useState('');
 
   const round = state.round!;
   const me = state.players.find((p) => p.id === state.you);
@@ -36,16 +39,52 @@ const GameBoard = ({ state }: { state: RoomState }) => {
     </div>
   );
 
-  const wildcardNote = round.power.kind === 'wildcard' && (
+  const wildcardNote = round.power.kind === 'wildcard' && state.phase !== 'wildcard' && (
     <p className="max-w-md text-center text-sm font-bold text-muted">
-      {isJudge
-        ? 'Say your made-up power out loud, then everyone plays a flaw.'
-        : 'The judge is about to make up a power. Play a flaw that could ruin anything.'}
+      {nameOf(round.judgeId)} made up this power. Play the flaw that ruins it.
     </p>
   );
 
   const renderContent = () => {
     switch (state.phase) {
+      case 'wildcard':
+        return (
+          <>
+            {powerCard}
+            {isJudge ? (
+              <form
+                className="w-full max-w-md space-y-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void act(async () => {
+                    const res = await setWildcard(wildcardText);
+                    if (res.ok) setWildcardText('');
+                    return res;
+                  });
+                }}
+              >
+                <p className="text-2xl font-black text-center">Wildcard! Make up a superpower.</p>
+                <input
+                  className="field"
+                  value={wildcardText}
+                  maxLength={100}
+                  onChange={(e) => setWildcardText(e.target.value)}
+                  placeholder={WILDCARD_EXAMPLES[round.number % WILDCARD_EXAMPLES.length]}
+                  aria-label="Your made-up superpower"
+                  autoFocus
+                />
+                <Button type="submit" className="w-full" disabled={busy || wildcardText.trim().length < 3}>
+                  Set the power ⚡
+                </Button>
+              </form>
+            ) : (
+              <p className="text-2xl font-black text-center">
+                {nameOf(round.judgeId)} is inventing a power...
+              </p>
+            )}
+          </>
+        );
+
       case 'submitting': {
         const iSubmitted = round.submittedIds.includes(state.you);
         const iWasSkipped = round.skippedIds.includes(state.you);

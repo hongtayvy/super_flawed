@@ -24,6 +24,12 @@ Strict and automatic. The next player in the queue judges each round. After ever
 - **Flaw deck** reshuffles its discards back in when it runs out. Hands are 7 cards and refill after every round.
 - Powers are generic descriptions only. No licensed characters.
 
+### Card guidelines
+
+Cards live in [`server/src/cards.ts`](server/src/cards.ts). A good flaw starts with "But", reads naturally after **any** power, is specific and absurd rather than generic, and fits on one card. Cut anything that is only funny with one particular power.
+
+After editing, run `npm run check-cards` in `server/` (checks duplicates, length, wording, licensed names and deck size). The server also logs one `flaw_result` JSON line per played flaw (`flaw`, `power`, `won`), so you can tally win rates from the logs and drop cards that never win.
+
 ### Plot Twists and the Wildcard
 
 Most draws are a normal power. Occasionally a Plot Twist is drawn and modifies that round for everyone, while the round still gets a normal power. A round never stacks two twists: if a twist is drawn straight after another, the deck reshuffles and redraws.
@@ -35,7 +41,7 @@ Most draws are a normal power. Occasionally a Plot Twist is drawn and modifies t
 | Sidekick | The winner's point is also given to another player (judge chooses) |
 | Villain | The winner also steals an earned point from another player (judge chooses) |
 
-**Wildcard:** the judge improvises a power out loud, then play continues normally.
+**Wildcard:** one card in the Super Power deck. The judge **types a power of their own** (up to 100 characters), it is shown to everyone, and then play continues normally. If a flaw timer is set and it runs out, the table gets a random power instead.
 
 Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts) (id, name, description, optional effect hooks), so adding one means adding an object.
 
@@ -121,6 +127,7 @@ All game state flows through the server. Actions are acknowledged with `{ ok, er
 | `toggle-bots` | Host → Server | Add or remove practice bots |
 | `set-timer` | Host → Server | Set the flaw timer (0, 60 or 90 seconds) |
 | `start-game` | Host → Server | Start once 3 to 8 players are ready |
+| `set-wildcard` | Judge → Server | Type the made-up power on a Wildcard round |
 | `submit-card` | Client → Server | Play a flaw from your hand |
 | `pick-winner` | Judge → Server | Pick the winning flaw |
 | `pick-target` | Judge → Server | Resolve a Sidekick or Villain twist |

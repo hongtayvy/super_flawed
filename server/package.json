@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "tsc",
-    "start": "npm run build && node dist/index.js"
+    "start": "npm run build && node dist/index.js",
+    "check-cards": "ts-node scripts/check-cards.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

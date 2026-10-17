@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import BlackCard from '../cards/BlackCard';
 import WhiteCard from '../cards/WhiteCard';
@@ -20,9 +20,9 @@ const GameBoard = ({ state }: { state: RoomState }) => {
   const [picks, setPicks] = useState<Picks>({});
 
   const round = state.round!;
-  // Phones show one of the round's cards at a time: the power, or the Plot Twist.
-  const [cardTab, setCardTab] = useState<'power' | 'power2' | 'twist'>('power');
-  useEffect(() => setCardTab('power'), [round.number, round.pass]);
+  // Which card is on top of the stack on phones (power first).
+  const [cardFront, setCardFront] = useState(0);
+  useEffect(() => setCardFront(0), [round.number, round.pass]);
   const me = state.players.find((p) => p.id === state.you);
   const isJudge = round.judgeId === state.you;
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '?';
@@ -38,45 +38,51 @@ const GameBoard = ({ state }: { state: RoomState }) => {
   };
 
   // The twist (if any) sits beside the power as a separate card; it is never printed on it.
-  // On a phone both cards would fill the screen, so only one shows at a time and the
-  // player taps between them. From sm up they sit side by side.
+  // On a phone the round's cards are stacked like a pile: the power on top, the twist (or
+  // second power) peeking out behind. Tapping the pile brings the next card to the front.
+  const roundCards = [
+    round.power && {
+      key: 'power',
+      node: <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />,
+    },
+    round.power2 && { key: 'power2', node: <BlackCard text={round.power2.text} isWildcard={false} /> },
+    round.twist && { key: 'twist', node: <TwistCard name={round.twist.name} description={round.twist.description} /> },
+  ].filter(Boolean) as { key: string; node: ReactNode }[];
+  const stacked = roundCards.map((_, i) => roundCards[(i + cardFront) % roundCards.length]);
+
   const cards = (
-    <div className="flex flex-col items-center gap-3">
-      {round.twist && (
-        <div className="flex sm:hidden gap-2" role="tablist" aria-label="Round cards">
-          {(round.power2 ? (['power', 'power2', 'twist'] as const) : (['power', 'twist'] as const)).map((tab) => (
-            <button
-              key={tab}
-              role="tab"
-              aria-selected={cardTab === tab}
-              onClick={() => setCardTab(tab)}
-              className={`rounded-full border-[3px] border-ink px-4 py-1 text-xs font-black uppercase ${
-                cardTab === tab ? (tab === 'twist' ? 'bg-coral' : 'bg-cobalt text-white') : 'bg-white'
-              }`}
-            >
-              {tab === 'twist' ? '🌀 Twist' : tab === 'power2' ? '⚡ Power 2' : round.power2 ? '⚡ Power 1' : '⚡ Power'}
-            </button>
-          ))}
+    <>
+      <div className="hidden sm:flex flex-wrap items-center justify-center gap-8">
+        {roundCards.map((c) => (
+          <div key={c.key}>{c.node}</div>
+        ))}
+      </div>
+      <div className="sm:hidden flex flex-col items-center gap-2">
+        <div className="relative h-[28rem] w-full max-w-xs">
+          {[...stacked].reverse().map((c) => {
+            const depth = stacked.indexOf(c);
+            return (
+              <motion.button
+                key={c.key}
+                type="button"
+                aria-label={roundCards.length > 1 ? 'Show the next card' : undefined}
+                onClick={() => roundCards.length > 1 && setCardFront((f) => f + 1)}
+                animate={{ x: depth * 14, y: depth * 34, scale: 1 - depth * 0.05 }}
+                style={{ zIndex: roundCards.length - depth }}
+                className="absolute left-1/2 top-2 -ml-32 block"
+              >
+                {c.node}
+              </motion.button>
+            );
+          })}
         </div>
-      )}
-      <div className="flex flex-wrap items-center justify-center gap-8">
-        {round.twist && (
-          <div className={cardTab === 'twist' ? '' : 'hidden sm:block'}>
-            <TwistCard name={round.twist.name} description={round.twist.description} />
-          </div>
-        )}
-        {round.power && (
-          <div className={round.twist && cardTab !== 'power' ? 'hidden sm:block' : ''}>
-            <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />
-          </div>
-        )}
-        {round.power2 && (
-          <div className={cardTab !== 'power2' ? 'hidden sm:block' : ''}>
-            <BlackCard text={round.power2.text} isWildcard={false} />
-          </div>
+        {roundCards.length > 1 && (
+          <p className="text-xs font-black uppercase tracking-wide text-muted">
+            Tap the card to flip through · {(cardFront % roundCards.length) + 1}/{roundCards.length}
+          </p>
         )}
       </div>
-    </div>
+    </>
   );
 
   const passBadge = round.passes > 1 && (

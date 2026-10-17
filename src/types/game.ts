@@ -4,9 +4,9 @@ export interface Card {
   text: string;
 }
 
-export type PowerKind = 'power' | 'wildcard';
+type PowerKind = 'power' | 'wildcard';
 
-export interface PowerCard extends Card {
+interface PowerCard extends Card {
   kind: PowerKind;
 }
 

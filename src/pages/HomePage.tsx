@@ -6,6 +6,7 @@ import Modal from '../components/ui/Modal';
 import PlayerSetup from '../components/game/PlayerSetup';
 import { useGame } from '../contexts/GameContext';
 import { useToast } from '../hooks/useToast';
+import VersionTag from '../components/layout/VersionTag';
 import { TWISTS } from '../../server/src/twists';
 
 const HomePage = () => {
@@ -211,6 +212,7 @@ const HomePage = () => {
           <PlayerSetup onSubmit={handleJoinGame} buttonText="Join Game" />
         </div>
       </Modal>
+      <VersionTag />
     </div>
   );
 };

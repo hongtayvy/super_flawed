@@ -25,10 +25,12 @@ export class Deck<T> {
     this.discards.push(...items);
   }
 
-  // Put a card back and mix everything not currently in play.
-  putBackAndReshuffle(item: T) {
+  // Put a card back and mix it into the pile. Discards only come back if the pile
+  // would otherwise be just that one card, so a redraw never recycles played cards early.
+  putBack(item: T) {
     this.pile.push(item);
-    this.reshuffle();
+    if (this.pile.length > 1) this.pile = shuffle(this.pile);
+    else this.reshuffle();
   }
 
   // Put every discarded card back and reshuffle (Reboot).

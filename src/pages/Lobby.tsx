@@ -153,7 +153,7 @@ const Lobby = () => {
                 'The judge picks the one funniest combo. No ties.',
                 'The judge changes every round, in order.',
                 `First to ${winScore} points wins.`,
-                'Plot Twists and a Wildcard are shuffled into the deck.',
+                'Plot Twists and Wildcards are shuffled into the deck.',
               ].map((rule, i) => (
                 <li key={rule} className="py-3 border-b border-line last:border-0">
                   <b className="text-cobalt mr-2">0{i + 1}</b>

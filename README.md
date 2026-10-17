@@ -2,7 +2,7 @@
 
 **Super Flawed** is a real-time multiplayer party game with a superhero skin. Every round a great superpower gets flipped, and everyone else races to sabotage it with the funniest possible flaw.
 
-> **Status: the game server is currently down.** The site at https://superflawed.com loads, but rooms can't be created or joined until the backend is back up.
+**Play it:** https://superflawed.com (the server runs on Render's paid plan, so it stays awake).
 
 ## 🎮 How to play
 

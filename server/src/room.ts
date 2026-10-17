@@ -39,6 +39,7 @@ interface Round {
   notes: string[]; // twist effects to show in the round result
   submissions: Map<string, Submission>;
   skipped: Set<string>;
+  swaps: { out: string; in: string }[]; // mulligans this round, for the round stats
   entries: Entry[];
   deadline: number | null;
   winningEntryId: string | null;
@@ -55,10 +56,10 @@ interface Round {
 }
 
 const BOTS = [
-  { id: 'bot-yeng', name: 'Yeng Chang', avatar: '2' },
-  { id: 'bot-rinci', name: 'Rinci', avatar: '4' },
-  { id: 'bot-tyoua', name: 'Tyoua', avatar: '3' },
-  { id: 'bot-neek', name: 'Neek', avatar: '5' },
+  { id: 'bot-jmaght', name: 'Jmaght', avatar: '2' },
+  { id: 'bot-touya', name: 'Touya', avatar: '4' },
+  { id: 'bot-margo', name: 'Margo', avatar: '3' },
+  { id: 'bot-shanks', name: 'Shanks', avatar: '5' },
 ];
 
 const BOT_WILDCARDS = [
@@ -387,6 +388,7 @@ export class Room {
       notes: [],
       submissions: new Map(),
       skipped: new Set(),
+      swaps: [],
       entries: [],
       deadline: null,
       winningEntryId: null,
@@ -638,6 +640,7 @@ export class Room {
     const fresh = this.flawDeck.draw();
     this.flawDeck.discard([old]);
     if (fresh) hand.splice(idx, 0, fresh);
+    if (fresh) round.swaps.push({ out: old.id, in: fresh.id });
     this.mulligansUsed.set(playerId, (this.mulligansUsed.get(playerId) ?? 0) + 1);
     this.broadcast();
     return null;
@@ -843,18 +846,6 @@ export class Room {
     round.winningEntryId = entry.id;
     round.awards.push({ text: entry.text, authorIds: entry.authorIds });
 
-    // One line per played flaw, so weak cards can be spotted later (win rate per card).
-    for (const [authorId, sub] of round.submissions) {
-      console.log(
-        JSON.stringify({
-          evt: 'flaw_result',
-          flaw: sub.card.id,
-          power: round.power?.id,
-          won: entry.authorIds.includes(authorId),
-        }),
-      );
-    }
-
     const ctx = this.twistContext(round);
     const target = round.twist?.target;
     if (target) {
@@ -970,6 +961,24 @@ export class Room {
           : round.awards.map((a, i) => `Pass ${i + 1}: ${this.names(a.authorIds)}`).join('. ') + '.';
     }
     round.result = { awards, note: [headline, ...round.notes].join(' ') };
+
+    // One line per round, so weak cards can be spotted later: every flaw played and whether it won,
+    // plus the flaws players swapped away (a card that keeps getting swapped is probably a dud).
+    console.log(
+      JSON.stringify({
+        evt: 'round',
+        round: round.number,
+        power: round.power?.id,
+        power2: round.power2?.id,
+        twist: round.twist?.id,
+        replay: round.replay,
+        plays: [...round.submissions].map(([authorId, sub]) => ({
+          flaw: sub.card.id,
+          won: round.awards.some((a) => a.authorIds.includes(authorId)),
+        })),
+        swaps: round.swaps,
+      }),
+    );
 
     const played = [...round.submissions.values()].map((s) => s.card);
     if (round.twist?.replayFlaws && round.power && round.awards.length > 0) {

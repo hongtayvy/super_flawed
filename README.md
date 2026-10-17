@@ -76,6 +76,8 @@ Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts): an id, 
 
 **Version stamp:** the landing page footer shows the site's version and commit plus the game server's (from `GET /version` on the server), so you can confirm a deploy finished. Bump `version` in both `package.json` files to release a new one.
 
+**Round stats:** when each round ends the server logs one JSON line (`evt: "round"`) with the power, twist, every flaw played and whether it won, and any flaws players swapped away with a mulligan. Cards that are often swapped or never win are the ones to cut or rewrite. One line per round keeps the log small.
+
 ## 🛠️ Tech stack
 
 | Layer    | Tech                                        |

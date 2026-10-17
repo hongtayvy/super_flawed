@@ -30,9 +30,12 @@ const GameRoom = () => {
           <div className="flex-grow">
             <GameBoard state={state} />
           </div>
-          <div className="min-h-[260px]">
-            <PlayerHand state={state} />
-          </div>
+          {/* The judge doesn't hold flaws, so there is no hand to show. */}
+          {state.round.judgeId !== state.you && (
+            <div className="min-h-[260px]">
+              <PlayerHand state={state} />
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-1 bg-white border-[3px] border-ink rounded-3xl shadow-pop overflow-hidden flex flex-col self-start">

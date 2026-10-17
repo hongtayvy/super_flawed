@@ -69,6 +69,7 @@ Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts): an id, 
 - On first join the server issues a persistent **player ID**, separate from the socket ID. The client keeps it in `localStorage`.
 - Hand, score and judge-queue position belong to the player ID. On refresh, a new tab or a dropped connection the client sends its ID and the server re-attaches the existing state.
 - If a round is waiting on a disconnected player, it waits a grace period (60 seconds by default), then **skips them for that round only**. They are never removed from the game.
+- **Host handover:** if the host leaves, or stays disconnected past the grace period, the host role passes to the next human in join order (bots never host). When the last human leaves, the room is closed.
 - The host can set an optional **flaw timer** (off, 60s or 90s) in the lobby.
 
 ## 🛠️ Tech stack

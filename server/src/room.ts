@@ -99,7 +99,11 @@ export class Room {
   private roundEndTimer: NodeJS.Timeout | null = null;
   private resumeNextRound = false;
 
-  constructor(code: string, private io: Server) {
+  private hostTimer: NodeJS.Timeout | null = null;
+  private closed = false;
+
+  // `onEmpty` is called once the last human has left, so the room can be closed.
+  constructor(code: string, private io: Server, private onEmpty: () => void = () => {}) {
     this.code = code;
   }
 
@@ -153,6 +157,10 @@ export class Room {
 
     this.clearTimer(this.graceTimers, playerId);
     this.clearTimer(this.lobbyTimers, playerId);
+    if (player.isHost && this.hostTimer) {
+      clearTimeout(this.hostTimer);
+      this.hostTimer = null;
+    }
 
     if (this.resumeNextRound) {
       this.resumeNextRound = false;
@@ -169,6 +177,7 @@ export class Room {
     player.disconnectedAt = Date.now();
     this.lastActivity = Date.now();
 
+    if (player.isHost) this.scheduleHostHandover(player.id);
     if (this.phase === 'lobby') {
       this.scheduleLobbyRemoval(player.id);
     } else {
@@ -191,7 +200,46 @@ export class Room {
       player.disconnectedAt = Date.now() - config.reconnectGraceMs;
       this.checkBlockers();
     }
-    this.broadcast();
+    this.afterDeparture();
+    if (this.present.length) this.broadcast();
+  }
+
+  // Humans still in the room: not removed and not having pressed Leave.
+  private get present() {
+    return this.humans.filter((p) => !p.left);
+  }
+
+  // Hand the host role to the next human in join order when the host is gone (or has
+  // been disconnected for good), and close the room once the last human has left.
+  private afterDeparture(forceFrom?: string) {
+    if (!this.present.length) {
+      if (!this.closed) {
+        this.closed = true;
+        this.dispose();
+        this.onEmpty();
+      }
+      return;
+    }
+    const host = this.humans.find((p) => p.isHost);
+    const gone = !host || host.left || host.id === forceFrom;
+    if (!gone) return;
+    const next = this.present.find((p) => p.id !== host?.id && p.connected) ?? this.present.find((p) => p.id !== host?.id);
+    if (!next) return;
+    if (host) host.isHost = false;
+    next.isHost = true;
+    next.isReady = true;
+  }
+
+  // A host who stays disconnected through the grace period passes the role on.
+  private scheduleHostHandover(hostId: string) {
+    if (this.hostTimer) clearTimeout(this.hostTimer);
+    this.hostTimer = setTimeout(() => {
+      this.hostTimer = null;
+      const p = this.players.get(hostId);
+      if (!p || p.connected || !p.isHost) return;
+      this.afterDeparture(hostId);
+      this.broadcast();
+    }, config.reconnectGraceMs);
   }
 
   private scheduleLobbyRemoval(playerId: string) {
@@ -201,7 +249,7 @@ export class Room {
       const p = this.players.get(playerId);
       if (p && !p.connected && this.phase === 'lobby') {
         this.removePlayer(playerId);
-        this.broadcast();
+        if (this.present.length) this.broadcast();
       }
     }, config.reconnectGraceMs);
     this.lobbyTimers.set(playerId, timer);
@@ -211,13 +259,7 @@ export class Room {
     const removed = this.players.get(playerId);
     this.players.delete(playerId);
     this.hands.delete(playerId);
-    if (removed?.isHost) {
-      const next = this.humans[0];
-      if (next) {
-        next.isHost = true;
-        next.isReady = true;
-      }
-    }
+    this.afterDeparture();
   }
 
   // ---------- lobby ----------
@@ -1202,6 +1244,8 @@ export class Room {
     this.clearRoundEndTimer();
     for (const t of this.lobbyTimers.values()) clearTimeout(t);
     this.lobbyTimers.clear();
+    if (this.hostTimer) clearTimeout(this.hostTimer);
+    this.hostTimer = null;
   }
 
   dispose() {

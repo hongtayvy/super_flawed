@@ -7,7 +7,7 @@ import { useToast } from '../../hooks/useToast';
 import type { RoomState } from '../../types/game';
 
 const PlayerHand = ({ state }: { state: RoomState }) => {
-  const { submitCard } = useGame();
+  const { submitCard, mulligan } = useGame();
   const { toast } = useToast();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -23,6 +23,15 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
     setSelectedId(null);
   }, [round.number, round.pass]);
 
+  const handleMulligan = async () => {
+    if (!selectedId || sending) return;
+    setSending(true);
+    const res = await mulligan(selectedId);
+    setSending(false);
+    setSelectedId(null);
+    if (!res.ok) toast({ title: res.error || 'Could not swap that flaw.', variant: 'destructive' });
+  };
+
   const handleSubmit = async () => {
     if (!selectedId || sending) return;
     setSending(true);
@@ -36,9 +45,16 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
       <div className="flex justify-between items-center mb-3">
         <h3 className="display text-2xl">Your flaws</h3>
         {state.phase === 'submitting' && !wasSkipped && (
-          <Button onClick={handleSubmit} disabled={!canPlay || !selectedId || sending} size="sm">
-            {hasSubmitted ? 'Submitted ✓' : 'Submit flaw ⚡'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {canPlay && state.mulligansLeft > 0 && (
+              <Button onClick={handleMulligan} disabled={!selectedId || sending} size="sm" variant="outline">
+                Swap ({state.mulligansLeft}) ↻
+              </Button>
+            )}
+            <Button onClick={handleSubmit} disabled={!canPlay || !selectedId || sending} size="sm">
+              {hasSubmitted ? 'Submitted ✓' : 'Submit flaw ⚡'}
+            </Button>
+          </div>
         )}
       </div>
 

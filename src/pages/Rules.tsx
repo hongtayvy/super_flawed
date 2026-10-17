@@ -111,11 +111,16 @@ const Rules = () => (
       ))}
     </div>
 
-    <h2 className="display text-4xl mb-4">Timers and dropped connections</h2>
+    <h2 className="display text-4xl mb-4">Timers, mulligans and dropped connections</h2>
     <div className="panel mb-12 space-y-3 font-bold leading-snug">
       <p>
         The host can set a <b>flaw timer</b> in the lobby (off, 60 or 90 seconds). Anyone who has not played when time
         runs out is skipped for that round.
+      </p>
+      <p>
+        The host can also give everyone <b>mulligans</b>: 1 to 3 swaps per round. Before you play, you can swap a flaw
+        in your hand for a fresh one. Swaps come back every round. The judge does not get them, and they are off when
+        a twist has the judge choose your flaw.
       </p>
       <p>
         If you refresh the page, switch tabs or lose your connection, you rejoin the same seat with your hand and score

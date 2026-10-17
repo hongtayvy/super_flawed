@@ -108,12 +108,6 @@ export const TWISTS: TwistDef[] = [
     minPlayers: 5,
   },
   {
-    id: 'time_loop',
-    name: 'Time Loop',
-    description: 'This power is played twice. Each pass has its own winner.',
-    passes: 2,
-  },
-  {
     id: 'sequel_bait',
     name: 'Sequel Bait',
     description: "There will be a sequel: this round's flaws come back next round, judged again by the next judge.",

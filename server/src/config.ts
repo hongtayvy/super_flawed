@@ -12,6 +12,8 @@ export const config = {
   roundEndMs: Number(process.env.ROUND_END_MS) || 6_000,
   // Host-selectable submit timers in seconds. 0 = wait for everyone.
   timerOptions: [0, 60, 90],
+  // Host-selectable mulligans per round: how many flaws a player may swap for a fresh one.
+  mulliganOptions: [0, 1, 2, 3],
   // Empty rooms are swept after this long with no connected humans.
   roomIdleMs: 60 * 60 * 1000,
 };

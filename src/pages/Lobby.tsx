@@ -11,7 +11,7 @@ const Lobby = () => {
   const [searchParams] = useSearchParams();
   const code = (searchParams.get('code') || '').trim().toUpperCase();
 
-  const { leaveRoom, setReady, toggleBots, setTimerSeconds, startGame } = useGame();
+  const { leaveRoom, setReady, toggleBots, setTimerSeconds, setMulligans, startGame } = useGame();
   const { toast } = useToast();
   const state = useRoomSession(code, 'lobby');
 
@@ -90,24 +90,47 @@ const Lobby = () => {
             <PlayerList players={state.players} />
           </div>
 
-          <div className="mb-5">
-            <label htmlFor="timer" className="field-label">
-              Flaw timer
-            </label>
-            <select
-              id="timer"
-              className="field py-2! max-w-[280px]"
-              value={state.settings.timerSeconds}
-              disabled={!isHost}
-              onChange={(e) => setTimerSeconds(Number(e.target.value))}
-            >
-              {state.settings.timerOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s === 0 ? 'Off (wait for everyone)' : `${s} seconds`}
-                </option>
-              ))}
-            </select>
-            {!isHost && <p className="text-xs font-bold text-muted mt-1">The host picks this.</p>}
+          <div className="mb-5 rounded-2xl border-[3px] border-ink bg-ice p-4">
+            <h3 className="display text-2xl mb-3">Settings</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="timer" className="field-label">
+                  Flaw timer
+                </label>
+                <select
+                  id="timer"
+                  className="field py-2!"
+                  value={state.settings.timerSeconds}
+                  disabled={!isHost}
+                  onChange={(e) => setTimerSeconds(Number(e.target.value))}
+                >
+                  {state.settings.timerOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s === 0 ? 'Off (wait for everyone)' : `${s} seconds`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="mulligans" className="field-label">
+                  Mulligans per round
+                </label>
+                <select
+                  id="mulligans"
+                  className="field py-2!"
+                  value={state.settings.mulligans}
+                  disabled={!isHost}
+                  onChange={(e) => setMulligans(Number(e.target.value))}
+                >
+                  {state.settings.mulliganOptions.map((n) => (
+                    <option key={n} value={n}>
+                      {n === 0 ? 'None' : `${n} swap${n === 1 ? '' : 's'}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {!isHost && <p className="text-xs font-bold text-muted mt-2">The host picks these.</p>}
           </div>
 
           <div className="flex flex-wrap gap-3">

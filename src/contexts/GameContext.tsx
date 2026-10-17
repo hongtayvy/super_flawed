@@ -23,6 +23,8 @@ interface GameContextType {
   setReady: (isReady: boolean) => void;
   toggleBots: () => void;
   setTimerSeconds: (seconds: number) => void;
+  setMulligans: (count: number) => void;
+  mulligan: (cardId: string) => Promise<Ack>;
   startGame: () => Promise<Ack>;
   revealPower: () => Promise<Ack>;
   setWildcard: (text: string) => Promise<Ack>;
@@ -155,6 +157,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setReady: (isReady) => socket.emit('player-ready', { isReady }),
     toggleBots: () => socket.emit('toggle-bots'),
     setTimerSeconds: (seconds) => socket.emit('set-timer', { seconds }),
+    setMulligans: (count) => socket.emit('set-mulligans', { count }),
+    mulligan: (cardId) => emitWithAck('mulligan', { cardId }),
     startGame: () => emitWithAck('start-game'),
     revealPower: () => emitWithAck('reveal-power'),
     setWildcard: (text) => emitWithAck('set-wildcard', { text }),

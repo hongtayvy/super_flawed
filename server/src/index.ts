@@ -110,6 +110,11 @@ io.on('connection', (socket) => {
     if (ctx) ctx.room.setTimerSeconds(ctx.playerId, Number(seconds));
   });
 
+  socket.on('set-mulligans', ({ count }) => {
+    const ctx = identify(socket);
+    if (ctx) ctx.room.setMulligans(ctx.playerId, Number(count));
+  });
+
   socket.on('start-game', (_payload, ack) => {
     const ctx = identify(socket);
     const reply = ackOf(ack);
@@ -128,6 +133,7 @@ io.on('connection', (socket) => {
     });
   };
 
+  action('mulligan', (room, id, p) => room.mulligan(id, String(p.cardId)));
   action('reveal-power', (room, id) => room.revealPower(id));
   action('set-wildcard', (room, id, p) => room.setWildcard(id, p.text));
   action('submit-card', (room, id, p) => room.submit(id, String(p.cardId)));

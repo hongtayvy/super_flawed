@@ -43,9 +43,10 @@ export interface RoomState {
   phase: Phase;
   you: string;
   players: PublicPlayer[];
-  settings: { timerSeconds: number; timerOptions: number[] };
+  settings: { timerSeconds: number; timerOptions: number[]; mulligans: number; mulliganOptions: number[] };
   rules: { winScore: number; minPlayers: number; maxPlayers: number };
   hand: Card[];
+  mulligansLeft: number; // swaps you can still make this round
   round: RoundView | null;
   gameWinnerId: string | null;
 }

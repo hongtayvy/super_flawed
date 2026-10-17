@@ -80,7 +80,8 @@ export class Room {
   readonly code: string;
   phase: Phase = 'lobby';
   players = new Map<string, Player>();
-  settings = { timerSeconds: 0 };
+  settings = { timerSeconds: 0, mulligans: 0 };
+  private mulligansUsed = new Map<string, number>(); // this round, per player
   lastActivity = Date.now();
 
   private hands = new Map<string, Card[]>();
@@ -301,6 +302,13 @@ export class Room {
     if (!this.isHost(playerId) || this.phase !== 'lobby') return;
     if (!config.timerOptions.includes(seconds)) return;
     this.settings.timerSeconds = seconds;
+    this.broadcast();
+  }
+
+  setMulligans(playerId: string, count: number) {
+    if (!this.isHost(playerId) || this.phase !== 'lobby') return;
+    if (!config.mulliganOptions.includes(count)) return;
+    this.settings.mulligans = count;
     this.broadcast();
   }
 
@@ -528,6 +536,7 @@ export class Room {
     this.clearPhaseTimers();
     this.phase = 'submitting';
     round.deadline = null;
+    this.mulligansUsed.clear();
 
     // Public Service Announcement forces a short limit; otherwise the room's timer applies.
     const seconds = round.twist?.submitSeconds ?? this.settings.timerSeconds;
@@ -614,6 +623,32 @@ export class Room {
   private nextJudge(): string {
     if (this.queue.length === 0) this.queue = [...this.judgeOrder];
     return this.queue.shift()!;
+  }
+
+  // A mulligan: swap one flaw from your hand for a fresh one before you play.
+  mulligan(playerId: string, cardId: string): string | null {
+    const round = this.round;
+    if (this.phase !== 'submitting' || !round) return 'You can only swap while flaws are being played.';
+    if (this.mulligansLeft(playerId) <= 0) return 'You have no swaps left this round.';
+    const hand = this.hands.get(playerId) ?? [];
+    const idx = hand.findIndex((c) => c.id === cardId);
+    if (idx === -1) return 'That card is not in your hand.';
+
+    const [old] = hand.splice(idx, 1);
+    const fresh = this.flawDeck.draw();
+    this.flawDeck.discard([old]);
+    if (fresh) hand.splice(idx, 0, fresh);
+    this.mulligansUsed.set(playerId, (this.mulligansUsed.get(playerId) ?? 0) + 1);
+    this.broadcast();
+    return null;
+  }
+
+  private mulligansLeft(playerId: string): number {
+    const round = this.round;
+    if (this.phase !== 'submitting' || !round) return 0;
+    if (playerId === round.judgeId || round.twist?.judgePicksCards) return 0;
+    if (round.submissions.has(playerId) || round.skipped.has(playerId) || this.players.get(playerId)?.left) return 0;
+    return Math.max(0, this.settings.mulligans - (this.mulligansUsed.get(playerId) ?? 0));
   }
 
   submit(playerId: string, cardId: string): string | null {
@@ -1135,10 +1170,16 @@ export class Room {
       phase: this.phase,
       you: playerId,
       players,
-      settings: { timerSeconds: this.settings.timerSeconds, timerOptions: config.timerOptions },
+      settings: {
+        timerSeconds: this.settings.timerSeconds,
+        timerOptions: config.timerOptions,
+        mulligans: this.settings.mulligans,
+        mulliganOptions: config.mulliganOptions,
+      },
       rules: { winScore: config.winScore, minPlayers: config.minPlayers, maxPlayers: config.maxPlayers },
       // Only ever your own hand.
       hand: this.hands.get(playerId) ?? [],
+      mulligansLeft: this.mulligansLeft(playerId),
       round: this.round ? this.roundView(this.round, playerId) : null,
       gameWinnerId: this.gameWinnerId,
     };

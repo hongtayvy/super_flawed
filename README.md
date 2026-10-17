@@ -36,7 +36,7 @@ After editing, run `npm run check-cards` in `server/` (checks duplicates, length
 
 Most draws are a normal power. Occasionally the card drawn is a **Plot Twist**. A twist is its own card: it is revealed on its own for everyone to read, and only when the judge clicks **Flip over the next power card** is the **next card drawn** to be the round's power. The twist stays on the table beside the power, never printed on it, and modifies that round for everyone. A round never stacks two twists: if a twist is drawn straight after another, the deck reshuffles and redraws.
 
-There are 17 twists (about 1 round in 6 has one). Some need a minimum number of players and are simply not drawn in smaller rooms.
+There are 16 twists (about 1 round in 6 has one). Some need a minimum number of players and are simply not drawn in smaller rooms.
 
 | Twist | What it does |
 |-------|--------------|
@@ -45,7 +45,6 @@ There are 17 twists (about 1 round in 6 has one). Some need a minimum number of 
 | **Sidekick** | The winner's point is also given to a second player, **chosen by the winner** (not the judge or themselves). If only one player qualifies, they get it automatically. |
 | **Villain** | The winner also steals 1 point from a player who has one (judge picks; automatic if only one player has points). Does nothing if nobody has points. |
 | **Team Up** *(5+ players)* | Players are randomly paired (one team of 3 when odd) and each team's flaws combine into one flaw. Every member of the winning team scores. |
-| **Time Loop** | The same power is played twice in a row. Each pass has its own winner and scores. |
 | **Sequel Bait** *(4+ players)* | The winner is picked but **kept secret and unscored**. Next round replays the same power with the **same flaws** (the new judge's own flaw sits out), judged by the next judge. Both winners are revealed and scored after the sequel, so nobody learns whose flaw is whose in either round. |
 | **Civilian Casualty** | After the winner, the judge picks one other flaw (anonymously). Its author loses a point if they have one. Automatic if only one other flaw. |
 | **Unmasked** | Authors are shown by name while judging. |
@@ -60,6 +59,8 @@ There are 17 twists (about 1 round in 6 has one). Some need a minimum number of 
 
 Points never go below 0. Only one twist per round.
 
+*Time Loop (the same power played twice, each pass with its own winner) is switched off for now. The engine still supports `passes` on a twist, so it can come back by adding its entry to `twists.ts` again; see the git history.*
+
 **Wildcard:** five cards in the Super Power deck. The judge **types a power of their own** (up to 100 characters), it is shown to everyone, and then play continues normally. If a flaw timer is set and it runs out, the table gets a random power instead.
 
 Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts): an id, name, description and a few generic flags/hooks the engine understands (`passes`, `teamUp`, `hidePower`, `target`, `afterWinner` and so on), so adding one means adding an object.
@@ -70,7 +71,8 @@ Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts): an id, 
 - Hand, score and judge-queue position belong to the player ID. On refresh, a new tab or a dropped connection the client sends its ID and the server re-attaches the existing state.
 - If a round is waiting on a disconnected player, it waits a grace period (60 seconds by default), then **skips them for that round only**. They are never removed from the game.
 - **Host handover:** if the host leaves, or stays disconnected past the grace period, the host role passes to the next human in join order (bots never host). When the last human leaves, the room is closed.
-- The host can set an optional **flaw timer** (off, 60s or 90s) in the lobby.
+- The host can set an optional **flaw timer** (off, 60s or 90s) in the lobby, in the **Settings** section.
+- **Mulligans:** also in Settings, the host can give everyone 0 to 3 swaps per round. A swap replaces one flaw in your hand with a fresh one (`mulligan` event) before you play. Not available to the judge, or on a round where the judge chooses the flaws.
 
 **Version stamp:** the landing page footer shows the site's version and commit plus the game server's (from `GET /version` on the server), so you can confirm a deploy finished. Bump `version` in both `package.json` files to release a new one.
 
@@ -153,6 +155,8 @@ All game state flows through the server. Actions are acknowledged with `{ ok, er
 | `choose-cards` | Judge → Server | Choose a card from each player's hand (Judge-ivine Intervention) |
 | `vote` | Client → Server | Vote for a flaw (Judge-ivine Intervention) |
 | `pick-winner` | Judge → Server | Pick the winning flaw |
+| `set-mulligans` | Host → Server | Set how many swaps each player gets per round (0 to 3) |
+| `mulligan` | Player → Server | Swap one flaw in your hand for a fresh one |
 | `reveal-power` | Judge → Server | Flip the next power card after a Plot Twist |
 | `pick-target` | Judge or winner → Server | Make a twist's follow-up pick (Sidekick: the winner; Villain, Civilian Casualty: the judge) |
 | `play-again` | Host → Server | Return to the lobby after a game |

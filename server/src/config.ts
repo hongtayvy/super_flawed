@@ -1,7 +1,7 @@
 // Tunable game rules. Override the grace period with RECONNECT_GRACE_MS.
 export const config = {
   winScore: 5,
-  handSize: 7,
+  handSize: 5,
   minPlayers: 3,
   maxPlayers: 8,
   // How long a round waits on a disconnected player before skipping them (this round only).

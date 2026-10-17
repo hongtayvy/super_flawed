@@ -30,7 +30,7 @@ Strict and automatic. The next player in the queue judges each round. After ever
 
 Cards live in [`server/src/cards.ts`](server/src/cards.ts). A good flaw starts with "But", reads naturally after **any** power, is specific and absurd rather than generic, and fits on one card. Cut anything that is only funny with one particular power.
 
-After editing, run `npm run check-cards` in `server/` (checks duplicates, length, wording, licensed names and deck size). The server also logs one `flaw_result` JSON line per played flaw (`flaw`, `power`, `won`), so you can tally win rates from the logs and drop cards that never win.
+After editing, run `npm run check-cards` in `server/` (checks duplicates, length, wording, licensed names and deck size). The server also logs one `round` JSON line per round (see Round stats below), so you can tally win rates and swap rates from the logs and drop cards that never win.
 
 ### Plot Twists and the Wildcard
 

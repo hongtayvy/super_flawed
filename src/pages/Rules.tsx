@@ -78,9 +78,9 @@ const Rules = () => (
         </p>
       </div>
       <div className="panel bg-lilac">
-        <h3 className="display text-2xl mb-2">★ Wildcard</h3>
+        <h3 className="display text-2xl mb-2">★ Wildcards</h3>
         <p className="font-bold leading-snug">
-          One Wildcard is shuffled into the Super Power deck. When it comes up, the judge types a power of their own,
+          Five Wildcards are shuffled into the Super Power deck. When one comes up, the judge types a power of their own,
           everyone sees it, and the round plays out normally.
         </p>
       </div>

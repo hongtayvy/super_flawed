@@ -22,7 +22,7 @@ Strict and automatic. The next player in the queue judges each round. After ever
 
 ### Decks
 
-- **Super Power deck** holds powers, **Plot Twists** and one **Wildcard**, all shuffled together. There is no separate twist deck or flip.
+- **Super Power deck** holds powers, **Plot Twists** and five **Wildcards**, all shuffled together. There is no separate twist deck or flip.
 - **Flaw deck** reshuffles its discards back in when it runs out. Hands are 5 cards and refill after every round.
 - Powers are generic descriptions only. No licensed characters.
 
@@ -60,7 +60,7 @@ There are 17 twists (about 1 round in 6 has one). Some need a minimum number of 
 
 Points never go below 0. Only one twist per round.
 
-**Wildcard:** one card in the Super Power deck. The judge **types a power of their own** (up to 100 characters), it is shown to everyone, and then play continues normally. If a flaw timer is set and it runs out, the table gets a random power instead.
+**Wildcard:** five cards in the Super Power deck. The judge **types a power of their own** (up to 100 characters), it is shown to everyone, and then play continues normally. If a flaw timer is set and it runs out, the table gets a random power instead.
 
 Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts): an id, name, description and a few generic flags/hooks the engine understands (`passes`, `teamUp`, `hidePower`, `target`, `afterWinner` and so on), so adding one means adding an object.
 

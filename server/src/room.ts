@@ -107,11 +107,11 @@ export class Room {
     this.code = code;
   }
 
-  // Plot Twists and the Wildcard are shuffled into the one Super Power deck.
+  // Plot Twists and the Wildcards are shuffled into the one Super Power deck.
   private static buildPowerDeck(): DeckEntry[] {
     return [
       ...POWER_CARDS.map((card): DeckEntry => ({ kind: 'card', card })),
-      { kind: 'card', card: WILDCARD },
+      ...Array.from({ length: config.wildcardCopies }, (): DeckEntry => ({ kind: 'card', card: WILDCARD })),
       ...TWISTS.flatMap((twist): DeckEntry[] =>
         Array.from({ length: twist.weight ?? 1 }, () => ({ kind: 'twist', twist })),
       ),

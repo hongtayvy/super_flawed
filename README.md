@@ -72,6 +72,8 @@ Twists are plain data in [`server/src/twists.ts`](server/src/twists.ts): an id, 
 - **Host handover:** if the host leaves, or stays disconnected past the grace period, the host role passes to the next human in join order (bots never host). When the last human leaves, the room is closed.
 - The host can set an optional **flaw timer** (off, 60s or 90s) in the lobby.
 
+**Version stamp:** the landing page footer shows the site's version and commit plus the game server's (from `GET /version` on the server), so you can confirm a deploy finished. Bump `version` in both `package.json` files to release a new one.
+
 ## 🛠️ Tech stack
 
 | Layer    | Tech                                        |

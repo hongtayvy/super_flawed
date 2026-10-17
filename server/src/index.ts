@@ -3,6 +3,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { config } from './config';
 import { Room } from './room';
 
@@ -10,13 +12,15 @@ const app = express();
 const httpServer = createServer(app);
 
 const allowedOrigins = [
-  'https://superflawed.netlify.app', // production frontend
-  'https://6880424d6dd5960008c088c6--superflawed.netlify.app', // Netlify preview
-  'http://localhost:5173', // dev
-  'https://super-flawed.victor-yang.workers.dev', // Cloudflare
   'https://superflawed.com',
   'https://www.superflawed.com',
+  'https://super-flawed.pages.dev', // Cloudflare Pages default domain
+  'http://localhost:5173', // dev
 ];
+
+// Shown at /version so a deploy can be confirmed. RENDER_GIT_COMMIT is set by Render.
+const version = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')).version as string;
+const commit = (process.env.RENDER_GIT_COMMIT || 'dev').slice(0, 7);
 
 app.use(cors({ origin: allowedOrigins }));
 
@@ -160,7 +164,11 @@ setInterval(() => {
 }, 5 * 60 * 1000).unref();
 
 app.get('/', (_, res) => {
-  res.send('🟢 Super Flawed backend active');
+  res.send(`🟢 Super Flawed backend active · v${version} (${commit})`);
+});
+
+app.get('/version', (_, res) => {
+  res.json({ version, commit });
 });
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;

@@ -19,6 +19,7 @@ const check = (label: string, cards: { id: string; text: string }[], maxLen: num
     if (c.text.length > maxLen) fail(`${label} ${c.id}: ${c.text.length} chars, max ${maxLen}`);
     if (prefix && !c.text.startsWith(prefix)) fail(`${label} ${c.id}: should start with "${prefix}"`);
     if (!/[.!?"]$/.test(c.text)) fail(`${label} ${c.id}: missing end punctuation`);
+    if (label === 'power' && /\bbut\b/i.test(c.text)) fail(`power ${c.id}: powers must not contain "but", that is the flaw's job`);
     if (LICENSED.test(c.text)) fail(`${label} ${c.id}: mentions a licensed character`);
   }
 };

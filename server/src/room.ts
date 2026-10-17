@@ -55,10 +55,10 @@ interface Round {
 }
 
 const BOTS = [
-  { id: 'bot-sean', name: 'Sean Jerubin', avatar: '2' },
-  { id: 'bot-rengo', name: 'Rengo Yang', avatar: '4' },
-  { id: 'bot-yeng', name: 'Yeng Chang', avatar: '3' },
-  { id: 'bot-tdawg', name: 'Tdawg Thao', avatar: '5' },
+  { id: 'bot-yeng', name: 'Yeng Chang', avatar: '2' },
+  { id: 'bot-rinci', name: 'Rinci', avatar: '4' },
+  { id: 'bot-tyoua', name: 'Tyoua', avatar: '3' },
+  { id: 'bot-neek', name: 'Neek', avatar: '5' },
 ];
 
 const BOT_WILDCARDS = [
@@ -256,7 +256,6 @@ export class Room {
   }
 
   private removePlayer(playerId: string) {
-    const removed = this.players.get(playerId);
     this.players.delete(playerId);
     this.hands.delete(playerId);
     this.afterDeparture();
@@ -417,6 +416,7 @@ export class Room {
     this.clearPhaseTimers();
     this.phase = 'twist';
     this.broadcast();
+    this.scheduleBots(); // a bot judge flips the next power card itself
   }
 
   // The judge flips the next card once everyone has read the twist. A twist is never
@@ -442,7 +442,7 @@ export class Room {
   private drawUntil(ok: (e: DeckEntry) => boolean): DeckEntry {
     let entry = this.powerDeck.draw()!;
     for (let guard = 0; !ok(entry) && guard < 100; guard++) {
-      this.powerDeck.putBackAndReshuffle(entry);
+      this.powerDeck.putBack(entry);
       entry = this.powerDeck.draw()!;
     }
     return entry;

@@ -122,6 +122,7 @@ io.on('connection', (socket) => {
     });
   };
 
+  action('reveal-power', (room, id) => room.revealPower(id));
   action('set-wildcard', (room, id, p) => room.setWildcard(id, p.text));
   action('submit-card', (room, id, p) => room.submit(id, String(p.cardId)));
   action('choose-cards', (room, id, p) => room.chooseCards(id, p.picks));

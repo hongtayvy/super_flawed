@@ -24,6 +24,7 @@ interface GameContextType {
   toggleBots: () => void;
   setTimerSeconds: (seconds: number) => void;
   startGame: () => Promise<Ack>;
+  revealPower: () => Promise<Ack>;
   setWildcard: (text: string) => Promise<Ack>;
   submitCard: (cardId: string) => Promise<Ack>;
   vote: (entryId: string) => Promise<Ack>;
@@ -155,6 +156,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     toggleBots: () => socket.emit('toggle-bots'),
     setTimerSeconds: (seconds) => socket.emit('set-timer', { seconds }),
     startGame: () => emitWithAck('start-game'),
+    revealPower: () => emitWithAck('reveal-power'),
     setWildcard: (text) => emitWithAck('set-wildcard', { text }),
     submitCard: (cardId) => emitWithAck('submit-card', { cardId }),
     vote: (entryId) => emitWithAck('vote', { entryId }),

@@ -34,7 +34,7 @@ After editing, run `npm run check-cards` in `server/` (checks duplicates, length
 
 ### Plot Twists and the Wildcard
 
-Most draws are a normal power. Occasionally the card drawn is a **Plot Twist**. A twist is its own card: it is revealed on its own (about 5 seconds, `TWIST_REVEAL_MS`), and only then is the **next card drawn** to be the round's power. The twist stays on the table beside the power, never printed on it, and modifies that round for everyone. A round never stacks two twists: if a twist is drawn straight after another, the deck reshuffles and redraws.
+Most draws are a normal power. Occasionally the card drawn is a **Plot Twist**. A twist is its own card: it is revealed on its own for everyone to read, and only when the judge clicks **Flip over the next power card** is the **next card drawn** to be the round's power. The twist stays on the table beside the power, never printed on it, and modifies that round for everyone. A round never stacks two twists: if a twist is drawn straight after another, the deck reshuffles and redraws.
 
 There are 17 twists (about 1 round in 6 has one). Some need a minimum number of players and are simply not drawn in smaller rooms.
 
@@ -150,6 +150,7 @@ All game state flows through the server. Actions are acknowledged with `{ ok, er
 | `choose-cards` | Judge → Server | Choose a card from each player's hand (Judge-ivine Intervention) |
 | `vote` | Client → Server | Vote for a flaw (Judge-ivine Intervention) |
 | `pick-winner` | Judge → Server | Pick the winning flaw |
+| `reveal-power` | Judge → Server | Flip the next power card after a Plot Twist |
 | `pick-target` | Judge or winner → Server | Make a twist's follow-up pick (Sidekick: the winner; Villain, Civilian Casualty: the judge) |
 | `play-again` | Host → Server | Return to the lobby after a game |
 | `leave-room` | Client → Server | Leave the room |

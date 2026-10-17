@@ -15,6 +15,7 @@ const PHASE_LABELS: Record<string, string> = {
 
 const RoundInfo = ({ state }: { state: RoomState }) => {
   const round = state.round!;
+  const isJudge = round.judgeId === state.you;
   const judge = state.players.find((p) => p.id === round.judgeId);
   const secondsLeft = useCountdown(state.phase === 'submitting' || state.phase === 'wildcard' ? round.deadline : null);
 
@@ -37,7 +38,7 @@ const RoundInfo = ({ state }: { state: RoomState }) => {
         </div>
         <div className="min-w-0">
           <span className={label}>Judge</span>
-          <div className={value}>{judge?.name ?? '?'}</div>
+          <div className={`${value} ${isJudge ? 'text-cobalt' : ''}`}>{isJudge ? 'You' : (judge?.name ?? '?')}</div>
         </div>
         <div className="min-w-0">
           <span className={label}>Phase</span>

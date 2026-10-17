@@ -23,14 +23,6 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
     setSelectedId(null);
   }, [round.number, round.pass]);
 
-  if (isJudge) {
-    return (
-      <div className="h-full min-h-[200px] flex flex-col items-center justify-center p-4 bg-lilac border-[3px] border-ink rounded-3xl">
-        <p className="display text-3xl text-center">You're the judge this round!</p>
-      </div>
-    );
-  }
-
   const handleSubmit = async () => {
     if (!selectedId || sending) return;
     setSending(true);

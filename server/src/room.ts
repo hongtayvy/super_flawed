@@ -374,12 +374,19 @@ export class Room {
   private beginTwistReveal() {
     this.clearPhaseTimers();
     this.phase = 'twist';
-    this.later(() => this.drawPowerAfterTwist(), config.twistRevealMs);
     this.broadcast();
   }
 
-  // Draw the round's power after a Plot Twist. A twist is never drawn straight
-  // after another one: reshuffle and redraw so a round never stacks two twists.
+  // The judge flips the next card once everyone has read the twist. A twist is never
+  // drawn straight after another one: reshuffle and redraw so a round never stacks two.
+  revealPower(playerId: string): string | null {
+    const round = this.round;
+    if (this.phase !== 'twist' || !round) return 'There is no Plot Twist to move past.';
+    if (playerId !== round.judgeId) return 'Only the judge flips the next power card.';
+    this.drawPowerAfterTwist();
+    return null;
+  }
+
   private drawPowerAfterTwist() {
     const round = this.round;
     if (this.phase !== 'twist' || !round) return;
@@ -963,6 +970,7 @@ export class Room {
         return get(this.pendingVoters());
       case 'target':
         return get(round.target ? [round.target.chooserId] : []);
+      case 'twist':
       case 'wildcard':
       case 'choosing':
       case 'judging':
@@ -1006,7 +1014,7 @@ export class Room {
       // The person who had to pick is gone: the twist's effect simply does not happen.
       round.notes.push(`${player.name} was away, so the Plot Twist did nothing.`);
       this.completePass();
-    } else if (this.phase === 'wildcard' || this.phase === 'choosing' || this.phase === 'judging') {
+    } else if (this.phase === 'twist' || this.phase === 'wildcard' || this.phase === 'choosing' || this.phase === 'judging') {
       this.finishRound(`${player.name} (the judge) disconnected. Round skipped.`);
     }
     this.broadcast();
@@ -1020,7 +1028,9 @@ export class Room {
     const bots = [...this.players.values()].filter((p) => p.isBot);
     const judgeIsBot = Boolean(this.players.get(round.judgeId)?.isBot);
 
-    if (this.phase === 'wildcard' && judgeIsBot) {
+    if (this.phase === 'twist' && judgeIsBot) {
+      this.later(() => this.drawPowerAfterTwist(), rand(2500, 4000));
+    } else if (this.phase === 'wildcard' && judgeIsBot) {
       this.later(() => this.applyWildcard(pick(BOT_WILDCARDS)), rand(1500, 3000));
     } else if (this.phase === 'submitting') {
       for (const bot of bots) {

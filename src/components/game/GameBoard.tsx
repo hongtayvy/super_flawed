@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import BlackCard from '../cards/BlackCard';
 import WhiteCard from '../cards/WhiteCard';
@@ -13,13 +13,16 @@ type Picks = Record<string, string>; // playerId -> chosen cardId
 const WILDCARD_EXAMPLES = ['You can sneeze lightning.', 'You can talk to sandwiches.', 'You can pause any song forever.'];
 
 const GameBoard = ({ state }: { state: RoomState }) => {
-  const { pickWinner, pickTarget, playAgain, setWildcard, vote, chooseCards } = useGame();
+  const { pickWinner, pickTarget, playAgain, setWildcard, revealPower, vote, chooseCards } = useGame();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [wildcardText, setWildcardText] = useState('');
   const [picks, setPicks] = useState<Picks>({});
 
   const round = state.round!;
+  // Phones show one of the round's cards at a time: the power, or the Plot Twist.
+  const [cardTab, setCardTab] = useState<'power' | 'power2' | 'twist'>('power');
+  useEffect(() => setCardTab('power'), [round.number, round.pass]);
   const me = state.players.find((p) => p.id === state.you);
   const isJudge = round.judgeId === state.you;
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '?';
@@ -35,11 +38,44 @@ const GameBoard = ({ state }: { state: RoomState }) => {
   };
 
   // The twist (if any) sits beside the power as a separate card; it is never printed on it.
+  // On a phone both cards would fill the screen, so only one shows at a time and the
+  // player taps between them. From sm up they sit side by side.
   const cards = (
-    <div className="flex flex-wrap items-center justify-center gap-8">
-      {round.twist && <TwistCard name={round.twist.name} description={round.twist.description} />}
-      {round.power && <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />}
-      {round.power2 && <BlackCard text={round.power2.text} isWildcard={false} />}
+    <div className="flex flex-col items-center gap-3">
+      {round.twist && (
+        <div className="flex sm:hidden gap-2" role="tablist" aria-label="Round cards">
+          {(round.power2 ? (['power', 'power2', 'twist'] as const) : (['power', 'twist'] as const)).map((tab) => (
+            <button
+              key={tab}
+              role="tab"
+              aria-selected={cardTab === tab}
+              onClick={() => setCardTab(tab)}
+              className={`rounded-full border-[3px] border-ink px-4 py-1 text-xs font-black uppercase ${
+                cardTab === tab ? (tab === 'twist' ? 'bg-coral' : 'bg-cobalt text-white') : 'bg-white'
+              }`}
+            >
+              {tab === 'twist' ? '🌀 Twist' : tab === 'power2' ? '⚡ Power 2' : round.power2 ? '⚡ Power 1' : '⚡ Power'}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center justify-center gap-8">
+        {round.twist && (
+          <div className={cardTab === 'twist' ? '' : 'hidden sm:block'}>
+            <TwistCard name={round.twist.name} description={round.twist.description} />
+          </div>
+        )}
+        {round.power && (
+          <div className={round.twist && cardTab !== 'power' ? 'hidden sm:block' : ''}>
+            <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />
+          </div>
+        )}
+        {round.power2 && (
+          <div className={cardTab !== 'power2' ? 'hidden sm:block' : ''}>
+            <BlackCard text={round.power2.text} isWildcard={false} />
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -89,7 +125,15 @@ const GameBoard = ({ state }: { state: RoomState }) => {
         return (
           <>
             {round.twist && <TwistCard name={round.twist.name} description={round.twist.description} large />}
-            <p className="text-2xl font-black text-center">Plot Twist! Drawing the next power card...</p>
+            {isJudge ? (
+              <Button className="w-full max-w-sm" disabled={busy} onClick={() => void act(revealPower)}>
+                Flip over the next power card ⚡
+              </Button>
+            ) : (
+              <p className="text-2xl font-black text-center">
+                Plot Twist! Waiting for {nameOf(round.judgeId)} to flip the next power card...
+              </p>
+            )}
           </>
         );
 

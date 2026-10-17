@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import WhiteCard from '../cards/WhiteCard';
+import FlawCard from '../cards/FlawCard';
 import Button from '../ui/Button';
 import { useGame } from '../../contexts/GameContext';
 import { useToast } from '../../hooks/useToast';
@@ -56,7 +56,7 @@ const PlayerHand = ({ state }: { state: RoomState }) => {
               style={{ width: '180px', minHeight: '200px' }}
               onClick={() => canPlay && setSelectedId(card.id)}
             >
-              <WhiteCard text={card.text} isSelected={selectedId === card.id} isSelectable={canPlay} />
+              <FlawCard text={card.text} isSelected={selectedId === card.id} isSelectable={canPlay} />
             </motion.div>
           ))}
         </div>

@@ -23,7 +23,7 @@ Strict and automatic. The next player in the queue judges each round. After ever
 ### Decks
 
 - **Super Power deck** holds powers, **Plot Twists** and one **Wildcard**, all shuffled together. There is no separate twist deck or flip.
-- **Flaw deck** reshuffles its discards back in when it runs out. Hands are 7 cards and refill after every round.
+- **Flaw deck** reshuffles its discards back in when it runs out. Hands are 5 cards and refill after every round.
 - Powers are generic descriptions only. No licensed characters.
 
 ### Card guidelines

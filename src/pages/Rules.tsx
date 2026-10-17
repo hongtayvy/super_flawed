@@ -6,7 +6,7 @@ import { TWISTS } from '../../server/src/twists';
 const WIN_SCORE = 5;
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 8;
-const HAND_SIZE = 7;
+const HAND_SIZE = 5;
 
 const STEPS = [
   {
@@ -16,7 +16,7 @@ const STEPS = [
   },
   {
     title: 'Everyone plays a flaw',
-    body: `Everyone else secretly plays one Flaw card from their hand of ${HAND_SIZE} to sabotage the power: "But a goose announces it to the whole neighborhood." The judge never plays a flaw (unless a twist says so).`,
+    body: `Everyone else secretly plays one Flaw card from their hand of ${HAND_SIZE} to sabotage the power: "But a goose announces it to the whole neighborhood." The judge never plays a flaw.`,
     bg: 'bg-sun',
   },
   {

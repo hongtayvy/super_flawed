@@ -52,10 +52,6 @@ const HomePage = () => {
 
   return (
     <div>
-      <div role="status" className="bg-coral border-b-[3px] border-ink px-4 py-3 text-center font-black">
-        🚧 The game server is down right now, so rooms can&apos;t be created or joined. We&apos;re working on getting it
-        back. Check out the <Link to="/rules" className="underline">rules</Link> in the meantime.
-      </div>
       <section className="relative bg-[#F3F5FF] border-b-[3px] border-ink overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 grid md:grid-cols-[1.05fr_.95fr] items-center gap-6 min-h-[600px]">
           <div className="py-12 relative z-10">

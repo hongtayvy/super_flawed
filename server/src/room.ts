@@ -85,6 +85,7 @@ export class Room {
 
   private hands = new Map<string, Card[]>();
   private queue: string[] = []; // judge queue; refilled once everyone has judged
+  private judgeOrder: string[] = []; // the shuffled order picked at game start, reused every cycle
   private flawDeck = new Deck<Card>(FLAW_CARDS);
   private powerDeck = new Deck<DeckEntry>(Room.buildPowerDeck());
   private round: Round | null = null;
@@ -338,7 +339,9 @@ export class Room {
       this.hands.set(p.id, []);
       this.refillHand(p.id);
     }
-    this.queue = [];
+    // A random seating for the whole game, so the first player to join is not always the first judge.
+    this.judgeOrder = shuffle([...this.players.keys()]);
+    this.queue = [...this.judgeOrder];
     this.roundCounter = 0;
     this.startRound();
   }
@@ -607,9 +610,9 @@ export class Room {
     this.broadcast();
   }
 
-  // Strict rotation: next in queue; once everyone has judged the queue resets.
+  // Rotation in the order picked at game start; once everyone has judged it starts over.
   private nextJudge(): string {
-    if (this.queue.length === 0) this.queue = [...this.players.keys()];
+    if (this.queue.length === 0) this.queue = [...this.judgeOrder];
     return this.queue.shift()!;
   }
 

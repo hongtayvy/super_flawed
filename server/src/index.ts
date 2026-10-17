@@ -59,7 +59,9 @@ io.on('connection', (socket) => {
     const name = cleanName(payload?.player?.name);
     if (!name) return reply({ ok: false, error: 'Enter a name.' });
 
-    const room = new Room(newCode(), io);
+    const code = newCode();
+    // The last human left: close the room.
+    const room = new Room(code, io, () => rooms.delete(code));
     rooms.set(room.code, room);
     const host = room.addPlayer(name, cleanAvatar(payload?.player?.avatar), true);
 

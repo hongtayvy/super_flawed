@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import BlackCard from '../cards/BlackCard';
-import WhiteCard from '../cards/WhiteCard';
+import PowerCard from '../cards/PowerCard';
+import FlawCard from '../cards/FlawCard';
 import TwistCard from '../cards/TwistCard';
 import Button from '../ui/Button';
 import { useGame } from '../../contexts/GameContext';
@@ -43,9 +43,9 @@ const GameBoard = ({ state }: { state: RoomState }) => {
   const roundCards = [
     round.power && {
       key: 'power',
-      node: <BlackCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />,
+      node: <PowerCard text={round.power.text} isWildcard={round.power.kind === 'wildcard'} />,
     },
-    round.power2 && { key: 'power2', node: <BlackCard text={round.power2.text} isWildcard={false} /> },
+    round.power2 && { key: 'power2', node: <PowerCard text={round.power2.text} isWildcard={false} /> },
     round.twist && { key: 'twist', node: <TwistCard name={round.twist.name} description={round.twist.description} /> },
   ].filter(Boolean) as { key: string; node: ReactNode }[];
   const stacked = roundCards.map((_, i) => roundCards[(i + cardFront) % roundCards.length]);
@@ -106,7 +106,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
       onClick={onClick}
       className={`relative ${onClick ? 'cursor-pointer' : ''}`}
     >
-      <WhiteCard text={entry.text} isSelectable={Boolean(onClick)} isSelected={entry.mine || chosen} />
+      <FlawCard text={entry.text} isSelectable={Boolean(onClick)} isSelected={entry.mine || chosen} />
       {entry.authorNames && (
         <p className="mt-1 text-center text-xs font-black uppercase tracking-wide text-muted">
           by {entry.authorNames.join(' & ')}
@@ -204,7 +204,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
                           className="w-44 shrink-0 cursor-pointer"
                           onClick={() => setPicks((prev) => ({ ...prev, [row.playerId]: card.id }))}
                         >
-                          <WhiteCard text={card.text} isSelectable isSelected={picks[row.playerId] === card.id} />
+                          <FlawCard text={card.text} isSelectable isSelected={picks[row.playerId] === card.id} />
                         </div>
                       ))}
                     </div>
@@ -363,7 +363,7 @@ const GameBoard = ({ state }: { state: RoomState }) => {
                     {award.authorIds.length ? `Power ruined by ${namesOf(award.authorIds)}!` : 'A winning flaw was picked!'}
                   </h3>
                   <div className="inline-block">
-                    <WhiteCard text={award.text} isWinner />
+                    <FlawCard text={award.text} isWinner />
                   </div>
                 </div>
               ))}

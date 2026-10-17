@@ -67,7 +67,7 @@ export const POWER_CARDS: PowerCard[] = [
   { id: 'p61', kind: 'power', text: 'You can generate electricity from your hands.' },
   { id: 'p62', kind: 'power', text: 'You can detect lies.' },
   { id: 'p63', kind: 'power', text: 'You can make perfect copies of any object.' },
-  { id: 'p64', kind: 'power', text: 'You can make any crowd instantly fall silent.' },
+  { id: 'p64', kind: 'power', text: 'You can make any room smell like fresh cookies.' },
   { id: 'p65', kind: 'power', text: 'You can summon a swarm of friendly bees.' },
   { id: 'p66', kind: 'power', text: 'You can turn into any animal.' },
   { id: 'p67', kind: 'power', text: 'You can bend light.' },

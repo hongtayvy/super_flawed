@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
 
-interface BlackCardProps {
+interface PowerCardProps {
   text: string;
   isWildcard?: boolean;
 }
 
 // The "power" card: the awesome ability everyone is about to ruin.
-const BlackCard = ({ text, isWildcard = false }: BlackCardProps) => {
+const PowerCard = ({ text, isWildcard = false }: PowerCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9, rotate: 0 }}
@@ -25,4 +25,4 @@ const BlackCard = ({ text, isWildcard = false }: BlackCardProps) => {
   );
 };
 
-export default BlackCard;
+export default PowerCard;

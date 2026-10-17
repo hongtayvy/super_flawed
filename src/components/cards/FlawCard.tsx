@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 
-interface WhiteCardProps {
+interface FlawCardProps {
   text: string;
   isSelected?: boolean;
   isSelectable?: boolean;
@@ -8,12 +8,12 @@ interface WhiteCardProps {
 }
 
 // The "flaw" card: the catch that ruins the power.
-const WhiteCard = ({
+const FlawCard = ({
   text,
   isSelected = false,
   isSelectable = false,
   isWinner = false,
-}: WhiteCardProps) => {
+}: FlawCardProps) => {
   return (
     <motion.div
       whileHover={isSelectable ? { scale: 1.05, y: -4 } : {}}
@@ -35,4 +35,4 @@ const WhiteCard = ({
   );
 };
 
-export default WhiteCard;
+export default FlawCard;
